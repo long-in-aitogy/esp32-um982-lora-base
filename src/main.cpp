@@ -196,7 +196,12 @@ __attribute__((noreturn)) void taskNtrip(void* parameter) {
     int loopStatus = 0;
     String rtcmRead = "";
     while (true) {
-        
+        #if CONNECT_USING_4G
+        if (!modem.isGprsConnected()) {
+            vTaskDelay(pdMS_TO_TICKS(1000));
+            continue;
+        }
+        #endif
         if (xSemaphoreTake(rtcmBufferMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS)))
         {
             latestRtcm = receiveRtcmFromGnss();

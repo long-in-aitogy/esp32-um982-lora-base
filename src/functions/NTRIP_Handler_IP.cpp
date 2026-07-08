@@ -87,7 +87,7 @@ int loopNTRIP(String& rtcmData) {
   // 1. Quản lý mất kết nối
   if (!ntripClient.connected()) {
     isIcyOk = false;
-    if (millis() - lastReconnect > 7000) { // Thử lại sau 7 giây
+    if (millis() - lastReconnect > 5000) { // Thử lại sau 7 giây
       lastReconnect = millis();
       return 504; // chuẩn bị kết nối lại
     }

@@ -17,7 +17,7 @@ WiFiClient ntripClient;
 #if CONNECT_USING_4G
 #include "hardware/Sim_handler.h"
 extern TinyGsm modem;
-TinyGsmClient ntripClient(modem);
+TinyGsmClient ntripClient(modem, 0);
 #endif
 
 extern String latestRtcm;

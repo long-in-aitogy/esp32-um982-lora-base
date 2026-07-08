@@ -29,6 +29,6 @@ extern String latestGGA;
 extern bool mqttHealthMode;
 
 // ================= ĐỊNH NGHĨA CÁC HÀM =================
-String formDeviceHealthString();
+String formDeviceHealthString(int32_t signalQualityDbm);
 
 #endif

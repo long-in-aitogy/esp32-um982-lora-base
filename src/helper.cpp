@@ -2,7 +2,7 @@
 
 extern String latestRtcm;
 
-String formDeviceHealthString()
+String formDeviceHealthString(int32_t signalQualityDbm)
 {
     // 1. Lấy các thông số hệ thống
     unsigned long uptime_s = millis() / 1000;
@@ -13,7 +13,7 @@ String formDeviceHealthString()
     String connected_via = "WiFi";
 #endif
 #if CONNECT_USING_4G
-    int32_t rssi = modem.getSignalQuality();
+    int32_t rssi = signalQualityDbm;
     String connected_via = "GSM";
 #endif
 

@@ -45,13 +45,6 @@ static void settleModemBeforeNtrip() {
 
     Serial.println("[SETUP][NTRIP] Modem da on dinh, bat dau ket noi NTRIP.");
 }
-
-static void resetNtripTransport() {
-    if (tcpStreamMutex != nullptr && xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
-        ntripClient.stop(0);
-        xSemaphoreGive(tcpStreamMutex);
-    }
-}
 #endif
 
 /* ==================SETUP VÀ LOOP======================== */
@@ -204,7 +197,12 @@ __attribute__((noreturn)) void taskNtrip(void* parameter) {
     String rtcmRead = "";
     while (true) {
         #if CONNECT_USING_4G
-        if (!modem.isGprsConnected()) {
+        bool gprsConnected = false;
+        if (xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
+            gprsConnected = modem.isGprsConnected();
+            xSemaphoreGive(tcpStreamMutex);
+        }
+        if (!gprsConnected) {
             vTaskDelay(pdMS_TO_TICKS(1000));
             continue;
         }
@@ -297,14 +295,21 @@ __attribute__((noreturn)) void healthCheckTask(void* parameter) {
     uint32_t remainingWait = 0;
     while (true) {
         loopStartTime = millis();
+        int32_t signalQualityDbm = -1;
         #if RTCM_COMMUNICATION_PROTOCOL == TCP_IP
         if (xSemaphoreTake(rtcmBufferMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS)))
         {
-            healthPayload = formDeviceHealthString();
+            #if CONNECT_USING_4G
+            if (xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
+                signalQualityDbm = modem.getSignalQuality();
+                xSemaphoreGive(tcpStreamMutex);
+            }
+            #endif
+            healthPayload = formDeviceHealthString(signalQualityDbm);
             xSemaphoreGive(rtcmBufferMutex);
         }
         #else
-            healthPayload = formDeviceHealthString();
+            healthPayload = formDeviceHealthString(signalQualityDbm);
         #endif
         vTaskDelay(1);
         Serial.print("[HEALTH CHECK] ");
@@ -378,12 +383,15 @@ __attribute__((noreturn)) void healthCheckTask(void* parameter) {
 
 void loop() {
     #if CONNECT_USING_4G
-    if (!modem.isGprsConnected()) {
-        digitalWrite(LED_PIN, HIGH);
-        Serial.println("[LOOP] GPRS mat ket noi, dang thu ket noi lai...");
-        resetNtripTransport();
-        connectGSM();
-        digitalWrite(LED_PIN, LOW);
+    if (xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
+        if (!modem.isGprsConnected()) {
+            digitalWrite(LED_PIN, HIGH);
+            Serial.println("[LOOP] GPRS mat ket noi, dang thu ket noi lai...");
+            ntripClient.stop(0);
+            connectGSM();
+            digitalWrite(LED_PIN, LOW);
+        }
+        xSemaphoreGive(tcpStreamMutex);
     }
     #endif
     #if CONNECT_USING_WIFI

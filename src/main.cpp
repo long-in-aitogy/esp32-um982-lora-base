@@ -153,9 +153,9 @@ void setup()
     #endif
 
 
-    // Serial.println("[SETUP] Task Health: Gui thong tin suc khoe thiet bi len MQTT moi 30s");
-    // xTaskCreatePinnedToCore(healthCheckTask, "Health Task", 4096, nullptr, 1, nullptr, 1);
-    // Serial.println("[SETUP] Da khoi dong Task Health!");
+    Serial.println("[SETUP] Task Health: Gui thong tin suc khoe thiet bi len MQTT moi 30s");
+    xTaskCreatePinnedToCore(healthCheckTask, "Health Task", 4096, nullptr, 1, nullptr, 1);
+    Serial.println("[SETUP] Da khoi dong Task Health!");
 
     Serial.println("=========================================");
     Serial.println("        KHOI DONG HOAN TAT               ");
@@ -306,6 +306,7 @@ __attribute__((noreturn)) void healthCheckTask(void* parameter) {
         #else
             healthPayload = formDeviceHealthString();
         #endif
+        vTaskDelay(1);
         Serial.print("[HEALTH CHECK] ");
         Serial.println(healthPayload);
 
@@ -333,6 +334,7 @@ __attribute__((noreturn)) void healthCheckTask(void* parameter) {
                 connectMQTT();
                 digitalWrite(LED_PIN, LOW);
             }
+            vTaskDelay(1);
 
             #if PROGRAM_DEBUG
             Serial.println("[HEALTH CHECK] MQTT dang ket noi, dang kich hoat loop...");
@@ -364,6 +366,7 @@ __attribute__((noreturn)) void healthCheckTask(void* parameter) {
 
             xSemaphoreGive(tcpStreamMutex);
         }
+        vTaskDelay(1);
         if (HEALTH_INTERVAL > (millis() - loopStartTime)) {
             remainingWait = HEALTH_INTERVAL - (millis() - loopStartTime);
         } else {

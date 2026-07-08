@@ -83,11 +83,12 @@ void setup()
 #endif
         if (networkConnected) {
             Serial.println("[SETUP] Ket noi mang thanh cong!");
-            setupMQTT();
             #if RTCM_COMMUNICATION_PROTOCOL == TCP_IP
+            modem.maintain();
             setupNTRIP();
             connectNTRIP();
             #endif
+            setupMQTT();
         } else {
             Serial.println("[ERROR] Khong the ket noi mang. Vui long kiem tra cau hinh va thu lai.");
         }
@@ -128,9 +129,9 @@ void setup()
     #endif
 
 
-    Serial.println("[SETUP] Task Health: Gui thong tin suc khoe thiet bi len MQTT moi 30s");
-    xTaskCreatePinnedToCore(healthCheckTask, "Health Task", 4096, nullptr, 1, nullptr, 1);
-    Serial.println("[SETUP] Da khoi dong Task Health!");
+    // Serial.println("[SETUP] Task Health: Gui thong tin suc khoe thiet bi len MQTT moi 30s");
+    // xTaskCreatePinnedToCore(healthCheckTask, "Health Task", 4096, nullptr, 1, nullptr, 1);
+    // Serial.println("[SETUP] Da khoi dong Task Health!");
 
     Serial.println("=========================================");
     Serial.println("        KHOI DONG HOAN TAT               ");
@@ -299,7 +300,7 @@ __attribute__((noreturn)) void healthCheckTask(void* parameter) {
             
             if (!mqtt.connected()) {
                 digitalWrite(LED_PIN, HIGH);
-                Serial.println("[LOOP] MQTT mat ket noi, dang thu ket noi lai...");
+                Serial.println("[HEALTH CHECK] MQTT mat ket noi, dang thu ket noi lai...");
                 connectMQTT();
                 digitalWrite(LED_PIN, LOW);
             }

@@ -70,7 +70,7 @@ inline constexpr uint16_t NTRIP_CASTER_PORT = 2101;
 
 #ifdef PROGRAM_TEST
 inline constexpr char NTRIP_MOUNTPOINT[] = "/test";
-inline constexpr char NTRIP_AUTH[] = "YWl0b2d5OmFpdG9neQ==";
+// inline constexpr char NTRIP_AUTH[] = "YWl0b2d5OmFpdG9neQ==";
 inline constexpr char NTRIP_AUTH_BASE_STATION[] = "12345";
 #else
 inline constexpr char NTRIP_MOUNTPOINT[] = "/humga";

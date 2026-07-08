@@ -55,20 +55,49 @@ int connectNTRIP() {
     
     // Đợi server trả lời ICY OK
     unsigned long timeout = millis();
-    while (ntripClient.connected() && millis() - timeout < 10000) {
-      if (ntripClient.available()) {
-        String response = ntripClient.readStringUntil('\n');
-        response.trim();
-        Serial.print("[CASTER RESP]: ");
-        Serial.println(response);
-        
-        if (response.indexOf("ICY 200 OK") != -1 || response.indexOf("ICY OK") != -1) {
-          isIcyOk = true;
-          isNmeaSent = false;
-          Serial.println("[NTRIP] Xac thuc THANH CONG (ICY OK)!");
+    String responseLine = "";
+    while (ntripClient.connected() && millis() - timeout < 60000L) {
+      #if CONNECT_USING_4G
+      // TinyGSM cần được "pump" để kéo URC/data từ modem vào socket buffer.
+      modem.maintain();
+      #endif
+
+      while (ntripClient.available()) {
+        const int byteValue = ntripClient.read();
+        if (byteValue < 0) {
           break;
         }
+
+        const char c = static_cast<char>(byteValue);
+        if (c == '\r') {
+          continue;
+        }
+
+        if (c == '\n') {
+          responseLine.trim();
+          if (!responseLine.isEmpty()) {
+            Serial.print("[CASTER RESP]: ");
+            Serial.println(responseLine);
+
+            if (responseLine.indexOf("ICY 200 OK") != -1 || responseLine.indexOf("ICY OK") != -1) {
+              isIcyOk = true;
+              isNmeaSent = false;
+              Serial.println("[NTRIP] Xac thuc THANH CONG (ICY OK)!");
+              break;
+            }
+          }
+          responseLine = "";
+          continue;
+        }
+
+        responseLine += c;
       }
+
+      if (isIcyOk) {
+        break;
+      }
+
+      delay(20);
     }
     if (!isIcyOk) {
       Serial.println("[NTRIP] Khong nhan duoc ICY OK tu Caster!");

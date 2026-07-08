@@ -45,6 +45,13 @@ static void settleModemBeforeNtrip() {
 
     Serial.println("[SETUP][NTRIP] Modem da on dinh, bat dau ket noi NTRIP.");
 }
+
+static void resetNtripTransport() {
+    if (tcpStreamMutex != nullptr && xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
+        ntripClient.stop(0);
+        xSemaphoreGive(tcpStreamMutex);
+    }
+}
 #endif
 
 /* ==================SETUP VÀ LOOP======================== */
@@ -141,7 +148,7 @@ void setup()
     Serial.println("[SETUP] Da khoi dong Task RTCM!");
     #elif RTCM_COMMUNICATION_PROTOCOL == TCP_IP
     Serial.println("[SETUP] Task NTRIP: Gui du lieu RTCM qua NTRIP.");
-    xTaskCreatePinnedToCore(taskNtrip, "NTRIP Task", 4096, nullptr, 2, nullptr, 0);
+    xTaskCreatePinnedToCore(taskNtrip, "NTRIP Task", 4096, nullptr, 2, nullptr, 1);
     Serial.println("[SETUP] Da khoi dong Task NTRIP!");
     #endif
 
@@ -371,6 +378,7 @@ void loop() {
     if (!modem.isGprsConnected()) {
         digitalWrite(LED_PIN, HIGH);
         Serial.println("[LOOP] GPRS mat ket noi, dang thu ket noi lai...");
+        resetNtripTransport();
         connectGSM();
         digitalWrite(LED_PIN, LOW);
     }

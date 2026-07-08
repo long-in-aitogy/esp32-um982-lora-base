@@ -40,6 +40,8 @@ int connectNTRIP() {
   Serial.print("\n[NTRIP] Dang mo TCP den: ");
   Serial.println(NTRIP_CASTER_IP);
 
+  ntripClient.stop();
+
   if (ntripClient.connect(NTRIP_CASTER_IP, NTRIP_CASTER_PORT)) {
     delay(1000); // Đợi một chút để đảm bảo kết nối ổn định
     Serial.println("[NTRIP] Da ket noi TCP! Dang gui Header...");
@@ -69,6 +71,7 @@ int connectNTRIP() {
           break;
         }
       }
+      vTaskDelay(pdMS_TO_TICKS(1));
     }
     if (!isIcyOk) {
       Serial.println("[NTRIP] Khong nhan duoc ICY OK tu Caster!");
@@ -86,6 +89,7 @@ int loopNTRIP(String& rtcmData) {
   int returnCode = NTRIP_MODE; // returnCode = NTRIP_MODE + ntripClient.available() * 4
   // 1. Quản lý mất kết nối
   if (!ntripClient.connected()) {
+    ntripClient.stop();
     isIcyOk = false;
     if (millis() - lastReconnect > 5000) { // Thử lại sau 7 giây
       lastReconnect = millis();

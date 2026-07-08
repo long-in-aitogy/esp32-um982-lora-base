@@ -15,6 +15,66 @@
 				"$platformio"
 			],
 			"group": "build"
+		},
+		{
+			"label": "Build tdm240x_dev_4g_test",
+			"type": "shell",
+			"command": "C:\\Users\\Long Long\\.platformio\\penv\\Scripts\\platformio.exe",
+			"args": [
+				"run",
+				"--environment",
+				"tdm240x_dev_4g_test"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$platformio"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Build tdm240x_dev_4g_test",
+			"type": "shell",
+			"command": "C:\\Users\\Long Long\\.platformio\\penv\\Scripts\\platformio.exe",
+			"args": [
+				"run",
+				"--environment",
+				"tdm240x_dev_4g_test"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$platformio"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Build tdm240x_dev_4g_test",
+			"type": "shell",
+			"command": "C:\\Users\\Long Long\\.platformio\\penv\\Scripts\\platformio.exe",
+			"args": [
+				"run",
+				"--environment",
+				"tdm240x_dev_4g_test"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$platformio"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Build tdm240x_dev_4g_test",
+			"type": "shell",
+			"command": "C:\\Users\\Long Long\\.platformio\\penv\\Scripts\\platformio.exe",
+			"args": [
+				"run",
+				"--environment",
+				"tdm240x_dev_4g_test"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$platformio"
+			],
+			"group": "build"
 		}
 	]
 }

@@ -63,21 +63,19 @@ bool connectGSM() {
         SerialMon.println("[GSM] Dang ket noi mang GSM...");
         if (modem.isNetworkConnected()) {
             SerialMon.println("[GSM] Mang GSM da ket noi.");
-            modem.gprsConnect(APN, GPRS_USER, GPRS_PASS);
-            if (modem.isGprsConnected()) {
+            if (modem.gprsConnect(APN, GPRS_USER, GPRS_PASS) && modem.isGprsConnected()) {
                 SerialMon.println("[GSM] GPRS da ket noi.");
                 return true;
             } else {
                 SerialMon.println("[GSM] GPRS chua ket noi.");
             }
-            return true;
+            return false;
         }
         SerialMon.println("[GSM] Chua ket noi duoc mang GSM ngay lap tuc. Dang doi...");
         if (modem.waitForNetwork(30000)) {
             delay(1000);
             SerialMon.println("[GSM] Mang GSM da ket noi.");
-            modem.gprsConnect(APN, GPRS_USER, GPRS_PASS);
-            if (modem.isGprsConnected()) {
+            if (modem.gprsConnect(APN, GPRS_USER, GPRS_PASS) && modem.isGprsConnected()) {
                 SerialMon.println("[GSM] GPRS da ket noi.");
                 return true;
             } else {

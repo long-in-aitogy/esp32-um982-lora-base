@@ -1,4 +1,4 @@
-#if NMEA_COMMUNICATION_PROTOCOL == 0 || defined(UNIT_TEST)
+#if RTCM_COMMUNICATION_PROTOCOL == TCP_IP || defined(UNIT_TEST)
 #define NTRIP_HANDLER_IP_CODE
 
 #include "functions/NTRIP_Handler_IP.h"
@@ -17,8 +17,12 @@ WiFiClient ntripClient;
 #if CONNECT_USING_4G
 #include "hardware/Sim_handler.h"
 extern TinyGsm modem;
-TinyGsmClient ntripClient(modem);
+TinyGsmClient ntripClient(modem, 0);
 #endif
+
+extern String latestRtcm;
+extern SemaphoreHandle_t rtcmBufferMutex;
+extern SemaphoreHandle_t tcpStreamMutex;
 
 // ================= ĐỊNH NGHĨA HÀM =================
 
@@ -36,25 +40,24 @@ int connectNTRIP() {
   Serial.print("\n[NTRIP] Dang mo TCP den: ");
   Serial.println(NTRIP_CASTER_IP);
 
+  ntripClient.stop();
+
   if (ntripClient.connect(NTRIP_CASTER_IP, NTRIP_CASTER_PORT)) {
+    delay(1000); // Đợi một chút để đảm bảo kết nối ổn định
     Serial.println("[NTRIP] Da ket noi TCP! Dang gui Header...");
     
-    String request = "";
-    if (NTRIP_MODE == 1) {
-      request = "SOURCE " + String(NTRIP_AUTH) + " " + String(NTRIP_MOUNTPOINT) + "\r\n";
-      request += "Source-Agent: NTRIP NtripServerCMD/1.0\r\n\r\n";
-    } else {
-      request = "GET " + String(NTRIP_MOUNTPOINT) + " HTTP/1.0\r\n";
-      request += "User-Agent: NTRIP AitogyNTRIPClient/20131124\r\n";
-      request += "Authorization: Basic " + String(NTRIP_AUTH) + "\r\n";
-      request += "Accept: */*\r\n";
-      request += "Connection: close\r\n\r\n";
-    }
+    sendRequest:
+    String request = "SOURCE " + String(NTRIP_AUTH_BASE_STATION) + " " + String(NTRIP_MOUNTPOINT) + " \r\n"
+          + "Source-Agent: NTRIP NtripServerCMD/1.0\r\n\r\n";
     ntripClient.print(request);
+
+    #if PROGRAM_DEBUG
+    Serial.println("[NTRIP] Da gui request header len Caster:\n" + request);
+    #endif
     
     // Đợi server trả lời ICY OK
     unsigned long timeout = millis();
-    while (ntripClient.connected() && millis() - timeout < 5000) {
+    while (ntripClient.connected() && millis() - timeout < 10000L) {
       if (ntripClient.available()) {
         String response = ntripClient.readStringUntil('\n');
         response.trim();
@@ -68,7 +71,12 @@ int connectNTRIP() {
           break;
         }
       }
+      vTaskDelay(pdMS_TO_TICKS(1));
     }
+    if (!isIcyOk) {
+      Serial.println("[NTRIP] Khong nhan duoc ICY OK tu Caster!");
+    }
+    // goto sendRequest; // Thử gửi lại request nếu không nhận được phản hồi
   } else {
     Serial.println("[NTRIP] Loi ket noi TCP socket!");
     return -1;
@@ -76,56 +84,38 @@ int connectNTRIP() {
   return 0;
 }
 
-int loopNTRIP(String currentGGA) {
+int loopNTRIP(String& rtcmData) {
   // không sử dụng tài nguyên chung, không cần mutex
   int returnCode = NTRIP_MODE; // returnCode = NTRIP_MODE + ntripClient.available() * 4
-#ifdef UNIT_TEST
-  auto& ntripOutput = Serial;
-#else
-  auto& ntripOutput = Serial1;
-#endif
   // 1. Quản lý mất kết nối
   if (!ntripClient.connected()) {
+    ntripClient.stop();
     isIcyOk = false;
-    if (millis() - lastReconnect > 7000) { // Thử lại sau 7 giây
-      connectNTRIP();
+    if (millis() - lastReconnect > 5000) { // Thử lại sau 7 giây
       lastReconnect = millis();
+      return 504; // chuẩn bị kết nối lại
     }
     return 500; // Chưa kết nối, sẽ quay lại ở vòng tiếp theo của loop()
   }
 
-  // 2. Xử lý sau khi kết nối thành công
-  if (isIcyOk) {
-    
-    // Nếu Mode 3 yêu cầu NMEA mà chưa gửi, tiến hành gửi ngay
-    // Xóa cái điều kiện !isNmeaSent đi, dùng timer để gửi định kỳ
-    static unsigned long lastGgaSentTime = 0;
-    
-    // Nếu Mode 3 yêu cầu NMEA: Gửi đều đặn mỗi 10 giây
-    if (NTRIP_MODE == 3) {
-      if (currentGGA.length() > 10 && (millis() - lastGgaSentTime > 10000)) {
-        Serial.print("[NTRIP UPLINK] Cap nhat vi tri cho Server: ");
-        Serial.println(currentGGA);
-        
-        ntripClient.print(currentGGA + "\r\n");
-        lastGgaSentTime = millis();
-      }
-    }
-    
-    // 3. Nhận dữ liệu RTCM từ Caster -> Đẩy thẳng xuống UM980
-    if (ntripClient.available()) {
-      uint8_t buffer[128];
-      int bytesRead = ntripClient.read(buffer, sizeof(buffer));
-      
-      // Bơm trực tiếp byte thô vào cổng Serial1 cho module định vị
-      ntripOutput.write(buffer, bytesRead); 
-      
-      // In dấu chấm nhỏ để biết đang nhận RTCM (bỏ comment nếu cần debug)
-      // Serial.print("*"); 
-
-      returnCode += 4;
-    }
+  // 2. Xử lý sau khi kết nối thành công / cảnh báo nếu không kết nối thành công
+  if (!isIcyOk) {
+    Serial.println("[NTRIP][WARN] Chua xac thuc voi Caster, du lieu van se duoc gui nhung khong dam bao se toi duoc caster...");
   }
+
+  // 3. Đẩy RTCM lên Caster nếu có dữ liệu
+  if (!rtcmData.isEmpty()) {
+    ntripClient.print(rtcmData); // Gửi dữ liệu RTCM lên Caster
+    #if PROGRAM_DEBUG
+    Serial.println("[NTRIP TASK] Da gui du lieu RTCM len Caster!");
+    #endif
+    returnCode += 4;
+  }
+  #if PROGRAM_DEBUG
+  else {
+    Serial.println("[NTRIP TASK] Khong co du lieu RTCM de gui len Caster.");
+  }
+  #endif
   return returnCode;
 }
 #endif // NTRIP_HANDLER_IP_CODE

@@ -1,10 +1,8 @@
-#if NMEA_COMMUNICATION_PROTOCOL == 1
+#if RTCM_COMMUNICATION_PROTOCOL == 1
 #include "hardware/Lora_handler.h"
 
-static bool lora_idle;
-
+bool lora_idle;
 static double txNumber;
-
 static RadioEvents_t RadioEvents;
 
 int loraSetup( void ) {
@@ -23,81 +21,90 @@ int loraSetup( void ) {
     return 0;
 }
 
-void loraSend(char* txData, int length)
+int loraSend(char* txData, int length)
 {
-	if(lora_idle == true)
+	if(!lora_idle)
 	{
-		txNumber += 0.01;
+        Radio.IrqProcess();
+        return 1;
+    }
 
-        Serial.printf("[LoRa] Chuan bi gui du lieu co do dai: %d byte.\r\n", length);
+    if (length > BUFFER_SIZE - 12) {
+        Serial.println("[LoRa Send] Do dai du lieu vuot qua BUFFER_SIZE, khong the gui!");
+        Radio.IrqProcess();
+        return 2;
+    }
 
-        Serial.println("[LoRa] Noi dung duoc in ra theo hexa:");
+    if (length <= 0) {
+        Serial.println("[LoRa Send] Do dai du lieu khong hop le, khong the gui!");
+        Radio.IrqProcess();
+        return 3;
+    }
 
-        for (int i = 0; i < length; i++) {
-            Serial.printf("%02X ", static_cast<uint8_t>(txData[i]));
+    // else
+    txNumber += 0.01;
 
-            if ((i + 1) % 16 == 0) {
-                Serial.println();
-            }
-        }
+    #if PROGRAM_DEBUG
 
-        Serial.println();
+    Serial.printf("[LoRa Send] Chuan bi gui du lieu co do dai: %d byte.\r\n", length);
 
-        if (length > BUFFER_SIZE - 12) {
-            Serial.println("[LoRa] Do dai du lieu vuot qua BUFFER_SIZE, se phan doan thanh nhieu goi!");
-        }
+    Serial.println("[LoRa Send] Noi dung duoc in ra theo hexa:");
 
-        while (length > BUFFER_SIZE - 12) {
-            Radio.Send( (uint8_t *)txData, BUFFER_SIZE - 12 );
-            txData += BUFFER_SIZE - 12;
-            length -= BUFFER_SIZE - 12;
-            Serial.printf("[LoRa] Da gui %d byte, con lai: %d\r\n", BUFFER_SIZE - 12, length);
+    for (int i = 0; i < length; i++) {
+        Serial.printf("%02X ", static_cast<uint8_t>(txData[i]));
 
-            Serial.println("[LoRa] Noi dung doan duoc in ra theo hexa: ");
-
-            for (int i = 0; i < BUFFER_SIZE - 12; i++) {
-                Serial.printf("%02X ", static_cast<uint8_t>(txData[i]));
-
-                if ((i + 1) % 16 == 0) {
-                    Serial.println();
-                }
-            }
-
+        if ((i + 1) % 16 == 0) {
             Serial.println();
         }
+    }
 
-		Radio.Send( (uint8_t *)txData, 
-            length > BUFFER_SIZE - 12 ? BUFFER_SIZE - 12 : (uint8_t)length );
-        
-        Serial.printf("[LoRa] Da gui %d byte cuoi cung.\r\n", length);
+    #endif // PROGRAM_DEBUG
 
-        Serial.println("[LoRa] Noi dung duoc in ra theo hexa: ");
+    Serial.println();
 
-        for (int i = 0; i < length; i++) {
-            Serial.printf("%02X ", static_cast<uint8_t>(txData[i]));
+    Radio.Send( (uint8_t *)txData, (uint8_t)length );
+    
+    Serial.printf("[LoRa Send] Da gui %d byte.\r\n", length);
 
-            if ((i + 1) % 16 == 0) {
-                Serial.println();
-            }
+    Serial.printf("[LoRa Send] Noi dung da gui duoc in ra (dang text): %.*s\r\n", length, txData);
+
+    Serial.println("[LoRa Send] Noi dung duoc in ra theo hexa: ");
+
+    for (int i = 0; i < length; i++) {
+        Serial.printf("%02X ", static_cast<uint8_t>(txData[i]));
+
+        if ((i + 1) % 16 == 0) {
+            Serial.println();
         }
+    }
 
-        Serial.println();
-        
-        lora_idle = false;
-	}
+    Serial.println();
+
+    lora_idle = false;
     Radio.IrqProcess( );
+    return 0;
 }
 
 void OnTxDone( void )
 {
-	Serial.println("[LoRa] Hoan thanh Tx......");
+	Serial.println("[LoRa Handler] Hoan thanh Tx......");
 	lora_idle = true;
+    digitalWrite(LED_PIN, HIGH);
+    delay(100);
+    digitalWrite(LED_PIN, LOW);
 }
 
 void OnTxTimeout( void )
 {
     Radio.Sleep( );
-    Serial.println("[LoRa] Het thoi gian cho TX......");
+    Serial.println("[LoRa Handler] Het thoi gian cho TX......");
     lora_idle = true;
+    digitalWrite(LED_PIN, HIGH);
+    delay(50);
+    digitalWrite(LED_PIN, LOW);
+    delay(50);
+    digitalWrite(LED_PIN, HIGH);
+    delay(50);
+    digitalWrite(LED_PIN, LOW);
 }
 #endif

@@ -15,7 +15,7 @@ extern TinyGsm modem;
 
 #include "functions/MQTT_Manager.h"
 
-#if NMEA_COMMUNICATION_PROTOCOL == TCP_IP
+#if RTCM_COMMUNICATION_PROTOCOL == TCP_IP
 #include "functions/NTRIP_Handler_IP.h"
 #else
 #include "hardware/Lora_handler.h"
@@ -29,6 +29,6 @@ extern String latestGGA;
 extern bool mqttHealthMode;
 
 // ================= ĐỊNH NGHĨA CÁC HÀM =================
-String formDeviceHealthString();
+String formDeviceHealthString(int32_t signalQualityDbm);
 
 #endif

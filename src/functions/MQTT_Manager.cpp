@@ -10,7 +10,7 @@ static WiFiClient espClient;
 #if CONNECT_USING_4G
 #include "hardware/Sim_handler.h"
 extern TinyGsm modem;
-static TinyGsmClient espClient(modem);
+static TinyGsmClient espClient(modem, 1);
 #endif
 PubSubClient mqtt(espClient);
 

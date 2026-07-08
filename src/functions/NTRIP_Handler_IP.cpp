@@ -55,49 +55,20 @@ int connectNTRIP() {
     
     // Đợi server trả lời ICY OK
     unsigned long timeout = millis();
-    String responseLine = "";
-    while (ntripClient.connected() && millis() - timeout < 60000L) {
-      #if CONNECT_USING_4G
-      // TinyGSM cần được "pump" để kéo URC/data từ modem vào socket buffer.
-      modem.maintain();
-      #endif
-
-      while (ntripClient.available()) {
-        const int byteValue = ntripClient.read();
-        if (byteValue < 0) {
+    while (ntripClient.connected() && millis() - timeout < 10000L) {
+      if (ntripClient.available()) {
+        String response = ntripClient.readStringUntil('\n');
+        response.trim();
+        Serial.print("[CASTER RESP]: ");
+        Serial.println(response);
+        
+        if (response.indexOf("ICY 200 OK") != -1 || response.indexOf("ICY OK") != -1) {
+          isIcyOk = true;
+          isNmeaSent = false;
+          Serial.println("[NTRIP] Xac thuc THANH CONG (ICY OK)!");
           break;
         }
-
-        const char c = static_cast<char>(byteValue);
-        if (c == '\r') {
-          continue;
-        }
-
-        if (c == '\n') {
-          responseLine.trim();
-          if (!responseLine.isEmpty()) {
-            Serial.print("[CASTER RESP]: ");
-            Serial.println(responseLine);
-
-            if (responseLine.indexOf("ICY 200 OK") != -1 || responseLine.indexOf("ICY OK") != -1) {
-              isIcyOk = true;
-              isNmeaSent = false;
-              Serial.println("[NTRIP] Xac thuc THANH CONG (ICY OK)!");
-              break;
-            }
-          }
-          responseLine = "";
-          continue;
-        }
-
-        responseLine += c;
       }
-
-      if (isIcyOk) {
-        break;
-      }
-
-      delay(20);
     }
     if (!isIcyOk) {
       Serial.println("[NTRIP] Khong nhan duoc ICY OK tu Caster!");
@@ -123,22 +94,24 @@ int loopNTRIP(String& rtcmData) {
     return 500; // Chưa kết nối, sẽ quay lại ở vòng tiếp theo của loop()
   }
 
-  // 2. Xử lý sau khi kết nối thành công
-  if (isIcyOk) {
-    // 3. Đẩy RTCM lên Caster nếu có dữ liệu
-    if (!rtcmData.isEmpty()) {
-      ntripClient.print(rtcmData); // Gửi dữ liệu RTCM lên Caster
-      #if PROGRAM_DEBUG
-      Serial.println("[NTRIP TASK] Da gui du lieu RTCM len Caster!");
-      #endif
-      returnCode += 4;
-    }
-    #if PROGRAM_DEBUG
-    else {
-      Serial.println("[NTRIP TASK] Khong co du lieu RTCM de gui len Caster.");
-    }
-    #endif
+  // 2. Xử lý sau khi kết nối thành công / cảnh báo nếu không kết nối thành công
+  if (!isIcyOk) {
+    Serial.println("[NTRIP][WARN] Chua xac thuc voi Caster, du lieu van se duoc gui nhung khong dam bao se toi duoc caster...");
   }
+
+  // 3. Đẩy RTCM lên Caster nếu có dữ liệu
+  if (!rtcmData.isEmpty()) {
+    ntripClient.print(rtcmData); // Gửi dữ liệu RTCM lên Caster
+    #if PROGRAM_DEBUG
+    Serial.println("[NTRIP TASK] Da gui du lieu RTCM len Caster!");
+    #endif
+    returnCode += 4;
+  }
+  #if PROGRAM_DEBUG
+  else {
+    Serial.println("[NTRIP TASK] Khong co du lieu RTCM de gui len Caster.");
+  }
+  #endif
   return returnCode;
 }
 #endif // NTRIP_HANDLER_IP_CODE

@@ -32,6 +32,21 @@ __attribute__((noreturn)) void taskNtrip(void* parameter);
 #endif
 __attribute__((noreturn)) void healthCheckTask(void* parameter);
 
+#if CONNECT_USING_4G && RTCM_COMMUNICATION_PROTOCOL == TCP_IP
+static void settleModemBeforeNtrip() {
+    Serial.println("[SETUP][NTRIP] Cho modem on dinh truoc khi bat tay NTRIP...");
+    const uint32_t settleStart = millis();
+    const uint32_t settleDurationMs = 600;
+
+    while (millis() - settleStart < settleDurationMs) {
+        modem.maintain();
+        delay(20);
+    }
+
+    Serial.println("[SETUP][NTRIP] Modem da on dinh, bat dau ket noi NTRIP.");
+}
+#endif
+
 /* ==================SETUP VÀ LOOP======================== */
 
 void setup()
@@ -84,8 +99,10 @@ void setup()
         if (networkConnected) {
             Serial.println("[SETUP] Ket noi mang thanh cong!");
             #if RTCM_COMMUNICATION_PROTOCOL == TCP_IP
-            modem.maintain();
             setupNTRIP();
+            #if CONNECT_USING_4G
+            settleModemBeforeNtrip();
+            #endif
             connectNTRIP();
             #endif
             setupMQTT();

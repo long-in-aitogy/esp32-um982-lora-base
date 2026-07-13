@@ -29,6 +29,67 @@ extern SemaphoreHandle_t tcpStreamMutex;
 int setupNTRIP() {
   isIcyOk = false;
   isNmeaSent = false;
+
+  char nmeaCmdUnlog[] = "UNLOG\r\n";
+  // char nmeaCmdSetBase[] = "MODE BASE -1618563.4772 5730003.6935 2278811.0631\r\n";
+  char nmeaCmdSetBase[] = "MODE BASE TIME 120 2.5\r\n";
+  char nmea1084SetOutputPortcom2[] = "RTCM1084 COM2 1\r\n";
+  char nmea1084SetOutputPortcom1[] = "RTCM1084 COM1 1\r\nconfig com1 115200\r\n";
+
+  unsigned long WaitStartTime = millis();
+  while (!Serial1.available() && millis() - WaitStartTime < 2000) {
+    delay(10);
+  }
+  Serial1.write(nmeaCmdUnlog, strlen(nmeaCmdUnlog)); // Gửi lệnh UNLOG
+
+  WaitStartTime = millis();
+  while (!Serial1.available() && millis() - WaitStartTime < 2000) {
+    delay(10);
+  }
+
+  String nmeaResponse = Serial1.readStringUntil('\n'); // Đọc phản hồi từ GNSS
+  Serial.println("[NMEA CMD] Response: " + nmeaResponse);
+  delay(50);
+
+
+  WaitStartTime = millis();
+  while (!Serial1.available() && millis() - WaitStartTime < 2000) {
+    delay(10);
+  }
+  Serial1.write(nmeaCmdSetBase, strlen(nmeaCmdSetBase)); // Gửi lệnh NMEA để thiết lập chế độ base station
+
+  WaitStartTime = millis();
+  while (!Serial1.available() && millis() - WaitStartTime < 2000) {
+    delay(10);
+  }
+
+  nmeaResponse = Serial1.readStringUntil('\n'); // Đọc phản hồi từ GNSS
+  Serial.println("[NMEA CMD] Response: " + nmeaResponse);
+  delay(50);
+
+
+  WaitStartTime = millis();
+  while (!Serial1.available() && millis() - WaitStartTime < 2000) {
+    delay(10);
+  }
+  Serial1.write(nmea1084SetOutputPortcom2, strlen(nmea1084SetOutputPortcom2));
+
+  WaitStartTime = millis();
+  while (!Serial1.available() && millis() - WaitStartTime < 2000) {
+    delay(10);
+  }
+  nmeaResponse = Serial1.readStringUntil('\n'); // Đọc phản hồi từ GNSS
+  Serial.println("[NMEA CMD] Response: " + nmeaResponse);
+
+
+  WaitStartTime = millis();
+  while (!Serial1.available() && millis() - WaitStartTime < 2000) {
+    delay(10);
+  }
+  Serial1.write(nmea1084SetOutputPortcom1, strlen(nmea1084SetOutputPortcom1));
+  
+  delay(50);
+
   return 0;
 }
 

@@ -68,7 +68,7 @@ inline constexpr char NTRIP_CASTER_IP[] = "aitogy.com.vn";
 inline constexpr uint16_t NTRIP_CASTER_PORT = 2101;
 #endif
 
-#ifdef PROGRAM_TEST
+#if defined(PROGRAM_TEST) || defined(PROGRAM_DEBUG)
 inline constexpr char NTRIP_MOUNTPOINT[] = "/test";
 // inline constexpr char NTRIP_AUTH[] = "YWl0b2d5OmFpdG9neQ==";
 inline constexpr char NTRIP_AUTH_BASE_STATION[] = "12345";

@@ -65,6 +65,7 @@ void setup()
 
     // Khởi tạo giao tiếp với UM980
     Serial1.begin(GNSS_BAUD, SERIAL_8N1, RX_GNSS, TX_GNSS);
+    Serial1.setTimeout(20);
     bool networkConnected = false;
 
     #ifndef NATIVE_BUILD
@@ -224,7 +225,7 @@ __attribute__((noreturn)) void taskNtrip(void* parameter) {
             #endif
             xSemaphoreGive(tcpStreamMutex);
         }
-        vTaskDelay(pdMS_TO_TICKS(500));
+        vTaskDelay(pdMS_TO_TICKS(200));
     }
 }
 #endif

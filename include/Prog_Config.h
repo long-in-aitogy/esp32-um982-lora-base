@@ -68,7 +68,7 @@ inline constexpr char NTRIP_CASTER_IP[] = "aitogy.com.vn";
 inline constexpr uint16_t NTRIP_CASTER_PORT = 2101;
 #endif
 
-#ifdef PROGRAM_TEST
+#if defined(PROGRAM_TEST) || defined(PROGRAM_DEBUG)
 inline constexpr char NTRIP_MOUNTPOINT[] = "/test";
 // inline constexpr char NTRIP_AUTH[] = "YWl0b2d5OmFpdG9neQ==";
 inline constexpr char NTRIP_AUTH_BASE_STATION[] = "12345";
@@ -86,11 +86,9 @@ inline constexpr uint16_t MQTT_PORT = 1883;
 inline constexpr char MQTT_USER[] = "mqttUser";
 inline constexpr char MQTT_PASS[] = "MqttPassword123$%^";
 
-inline constexpr char TOPIC_PUB_DATA_GGA[] = "tdm2402/um980/data/gga";
-inline constexpr char TOPIC_PUB_DATA_KSXT[] = "tdm2402/um980/data/ksxt";
-inline constexpr char TOPIC_SUB_CMD[] = "tdm2402/um980/cmd";
+inline constexpr char TOPIC_SUB_CMD[] = "tdm2402/um980_base/cmd";
 inline constexpr char TOPIC_PUB_RAW_RTCM[] = "tdm2402/um980_base/raw/last_rtcm";
-inline constexpr char TOPIC_PUB_HEALTH[] = "tdm2402/um980/health";
+inline constexpr char TOPIC_PUB_HEALTH[] = "tdm2402/um980_base/health";
 
 // ================= CẤU HÌNH KIỂM TRA SỨC KHOẺ =================
 const unsigned long HEALTH_INTERVAL = 30000; // chu kỳ gửi thông tin sức khoẻ (ms)

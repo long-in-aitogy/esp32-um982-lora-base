@@ -48,6 +48,8 @@ int setupNTRIP() {
   char rtcm1124SetOutputCom1[] = "RTCM1124 COM1 1\r\n";
   char rtcmSetBaudCom1[] = "config com1 115200\r\n";
 
+  char cmdSaveConfig[] = "saveconfig\r\n";
+
   // tắt tính năng log trước khi bật lại
   unsigned long WaitStartTime = millis();
   while (!Serial1.available() && millis() - WaitStartTime < 2000) {
@@ -190,6 +192,21 @@ int setupNTRIP() {
     delay(10);
   }
   Serial1.write(rtcmSetBaudCom2, strlen(rtcmSetBaudCom2)); // Gửi lệnh RTCM để thiết lập đầu ra COM2
+
+  WaitStartTime = millis();
+  while (!Serial1.available() && millis() - WaitStartTime < 2000) {
+    delay(10);
+  }
+  nmeaResponse = Serial1.readStringUntil('\n'); // Đọc phản hồi từ GNSS
+  Serial.println("[NMEA CMD] Response: " + nmeaResponse);
+  delay(20);
+
+  // lưu cấu hình
+  WaitStartTime = millis();
+  while (!Serial1.available() && millis() - WaitStartTime < 2000) {
+    delay(10);
+  }
+  Serial1.write(cmdSaveConfig, strlen(cmdSaveConfig)); // Gửi lệnh lưu cấu hình
 
   WaitStartTime = millis();
   while (!Serial1.available() && millis() - WaitStartTime < 2000) {

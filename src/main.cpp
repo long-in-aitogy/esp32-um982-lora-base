@@ -208,10 +208,10 @@ __attribute__((noreturn)) void taskNtrip(void* parameter) {
             continue;
         }
         #endif
+        rtcmRead = receiveRtcmFromGnss();
         if (xSemaphoreTake(rtcmBufferMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS)))
         {
-            latestRtcm = receiveRtcmFromGnss();
-            rtcmRead = latestRtcm;
+            latestRtcm = rtcmRead;
             xSemaphoreGive(rtcmBufferMutex);
         }
         if (xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
@@ -220,10 +220,10 @@ __attribute__((noreturn)) void taskNtrip(void* parameter) {
                 connectNTRIP();
             }
             loopStatus = loopNTRIP(rtcmRead);
+            xSemaphoreGive(tcpStreamMutex);
             #if PROGRAM_DEBUG
             Serial.println("[NTRIP TASK] loopNTRIP() tra ve: " + String(loopStatus));
             #endif
-            xSemaphoreGive(tcpStreamMutex);
         }
         vTaskDelay(pdMS_TO_TICKS(200));
     }

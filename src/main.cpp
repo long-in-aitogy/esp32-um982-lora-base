@@ -1,5 +1,6 @@
 #include "helper.h"
 #include "functions/RTCM_Receiver.h"
+#include "functions/cmd_handler.h"
 
 // ================= ĐỊNH NGHĨA CÁC BIẾN TOÀN CỤC =================
 extern PubSubClient mqtt;

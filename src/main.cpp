@@ -208,10 +208,10 @@ __attribute__((noreturn)) void taskNtrip(void* parameter) {
             continue;
         }
         #endif
+        rtcmRead = receiveRtcmFromGnss();
         if (xSemaphoreTake(rtcmBufferMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS)))
         {
-            latestRtcm = receiveRtcmFromGnss();
-            rtcmRead = latestRtcm;
+            latestRtcm = rtcmRead;
             xSemaphoreGive(rtcmBufferMutex);
         }
         if (xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
@@ -220,10 +220,10 @@ __attribute__((noreturn)) void taskNtrip(void* parameter) {
                 connectNTRIP();
             }
             loopStatus = loopNTRIP(rtcmRead);
+            xSemaphoreGive(tcpStreamMutex);
             #if PROGRAM_DEBUG
             Serial.println("[NTRIP TASK] loopNTRIP() tra ve: " + String(loopStatus));
             #endif
-            xSemaphoreGive(tcpStreamMutex);
         }
         vTaskDelay(pdMS_TO_TICKS(200));
     }
@@ -363,11 +363,6 @@ __attribute__((noreturn)) void healthCheckTask(void* parameter) {
                 Serial.println("[GNSS PUBLISH] Dang gui du lieu NMEA len MQTT...");
                 #endif
                 publishRaw(latestRtcm); // publishRaw accepts String&
-
-                /*Xóa tọa độ sau khi đã dùng để đánh giá sức khoẻ, nếu còn giữ, 
-                trong trường hợp không có dữ liệu mới, sẽ luôn báo GNSS OK dù 
-                thực tế đã mất tín hiệu. Việc này giúp phản ánh tình trạng thực tế hơn.*/ 
-                latestRtcm = "";
             }
 
             xSemaphoreGive(tcpStreamMutex);

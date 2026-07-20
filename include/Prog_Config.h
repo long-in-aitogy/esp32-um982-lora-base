@@ -69,13 +69,13 @@ inline constexpr uint16_t NTRIP_CASTER_PORT = 2101;
 #endif
 
 #if defined(PROGRAM_TEST) || defined(PROGRAM_DEBUG)
-inline constexpr char NTRIP_MOUNTPOINT[] = "/test_aitogy_4g";
+inline constexpr char NTRIP_MOUNTPOINT[] = "/test";
 // inline constexpr char NTRIP_AUTH[] = "YWl0b2d5OmFpdG9neQ==";
 inline constexpr char NTRIP_AUTH_BASE_STATION[] = "12345";
 #else
-inline constexpr char NTRIP_MOUNTPOINT[] = "/aitogy2";
+inline constexpr char NTRIP_MOUNTPOINT[] = "/test";
 // Base64 của "trung:12345"
-inline constexpr char NTRIP_AUTH[] = "dHJ1bmc6MTIzNDU=";
+// inline constexpr char NTRIP_AUTH[] = "dHJ1bmc6MTIzNDU=";
 inline constexpr char NTRIP_AUTH_BASE_STATION[] = "12345";
 #endif
 

@@ -363,11 +363,6 @@ __attribute__((noreturn)) void healthCheckTask(void* parameter) {
                 Serial.println("[GNSS PUBLISH] Dang gui du lieu NMEA len MQTT...");
                 #endif
                 publishRaw(latestRtcm); // publishRaw accepts String&
-
-                /*Xóa tọa độ sau khi đã dùng để đánh giá sức khoẻ, nếu còn giữ, 
-                trong trường hợp không có dữ liệu mới, sẽ luôn báo GNSS OK dù 
-                thực tế đã mất tín hiệu. Việc này giúp phản ánh tình trạng thực tế hơn.*/ 
-                latestRtcm = "";
             }
 
             xSemaphoreGive(tcpStreamMutex);

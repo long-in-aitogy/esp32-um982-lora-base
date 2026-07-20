@@ -73,7 +73,7 @@ inline constexpr char NTRIP_MOUNTPOINT[] = "/test";
 // inline constexpr char NTRIP_AUTH[] = "YWl0b2d5OmFpdG9neQ==";
 inline constexpr char NTRIP_AUTH_BASE_STATION[] = "12345";
 #else
-inline constexpr char NTRIP_MOUNTPOINT[] = "/humga";
+inline constexpr char NTRIP_MOUNTPOINT[] = "/aitogy2";
 // Base64 của "trung:12345"
 inline constexpr char NTRIP_AUTH[] = "dHJ1bmc6MTIzNDU=";
 inline constexpr char NTRIP_AUTH_BASE_STATION[] = "12345";
@@ -86,9 +86,9 @@ inline constexpr uint16_t MQTT_PORT = 1883;
 inline constexpr char MQTT_USER[] = "mqttUser";
 inline constexpr char MQTT_PASS[] = "MqttPassword123$%^";
 
-inline constexpr char TOPIC_SUB_CMD[] = "tdm2402/um980_base/cmd";
-inline constexpr char TOPIC_PUB_RAW_RTCM[] = "tdm2402/um980_base/raw/last_rtcm";
-inline constexpr char TOPIC_PUB_HEALTH[] = "tdm2402/um980_base/health";
+inline constexpr char TOPIC_SUB_CMD[] = "tdm2402/um980_base_001/cmd";
+inline constexpr char TOPIC_PUB_RAW_RTCM[] = "tdm2402/um980_base_001/raw/last_rtcm";
+inline constexpr char TOPIC_PUB_HEALTH[] = "tdm2402/um980_base_001/health";
 
 // ================= CẤU HÌNH KIỂM TRA SỨC KHOẺ =================
 const unsigned long HEALTH_INTERVAL = 30000; // chu kỳ gửi thông tin sức khoẻ (ms)

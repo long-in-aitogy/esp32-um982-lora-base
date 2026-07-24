@@ -3,6 +3,9 @@
 
 #include <cstdint>
 #include "Top_Lvl_Config.h"
+#include <Preferences.h>
+
+extern Preferences prefs;
 
 // ================= CẤU HÌNH CHÂN CẮM VÀ TỐC ĐỘ SERIAL =================
 #if BOARD_HELTEC

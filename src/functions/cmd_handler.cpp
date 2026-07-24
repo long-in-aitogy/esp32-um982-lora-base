@@ -1,5 +1,8 @@
 #include "functions/cmd_handler.h"
 #include <vector>
+#include <Preferences.h>
+
+extern Preferences prefs;
 
 std::vector<String> splitCommand(const String &command) {
     std::vector<String> cmdWords;
@@ -45,45 +48,47 @@ cmd_action_t handleCommand(std::vector<String> &cmdWords) {
         Serial.println("This command is not yet implemented.");
         return CMD_ACTION_NONE;
     }
-    if (cmdWords[2] == "MQTT") {
-        if (cmdWords[3] == "SET" && cmdWords[4] == "SERVER") {
+    if (cmdWords[1] == "MQTT") {
+        if (cmdWords[2] == "SET" && cmdWords[3] == "SERVER") {
             // Will be implemented later
             Serial.println("This command is not yet implemented.");
             return CMD_ACTION_NONE;
         }
-        if (cmdWords[3] == "SET" && cmdWords[4] == "PUBTPCHEALTH") {
+        if (cmdWords[2] == "SET" && cmdWords[3] == "PUBTPCHEALTH") {
             // Will be implemented later
             Serial.println("This command is not yet implemented.");
             return CMD_ACTION_NONE;
         }
-        if (cmdWords[3] == "SET" && cmdWords[4] == "PUBTPCRAW") {
+        if (cmdWords[2] == "SET" && cmdWords[3] == "PUBTPCRAW") {
             // Will be implemented later
             Serial.println("This command is not yet implemented.");
             return CMD_ACTION_NONE;
         }
-        if (cmdWords[3] == "SET" && cmdWords[4] == "SUBTPCCMD") {
+        if (cmdWords[2] == "SET" && cmdWords[3] == "SUBTPCCMD") {
             // Will be implemented later
             Serial.println("This command is not yet implemented.");
             return CMD_ACTION_NONE;
         }
     }
-    if (cmdWords[2] == "NTRIP") {
-        if (cmdWords[3] == "SET" && cmdWords[4] == "CSTRADDR") {
+    if (cmdWords[1] == "NTRIP") {
+        if (cmdWords[2] == "SET" && cmdWords[3] == "CSTRADDR") {
             // Will be implemented later
             Serial.println("This command is not yet implemented.");
             return CMD_ACTION_NONE;
         }
-        if (cmdWords[3] == "SET" && cmdWords[4] == "CSTRPORT") {
+        if (cmdWords[2] == "SET" && cmdWords[3] == "CSTRPORT") {
             // Will be implemented later
             Serial.println("This command is not yet implemented.");
             return CMD_ACTION_NONE;
         }
-        if (cmdWords[3] == "SET" && cmdWords[4] == "MNTPNT") {
-            // Will be implemented later
-            Serial.println("This command is not yet implemented.");
+        if (cmdWords[2] == "SET" && cmdWords[3] == "MNTPNT") {
+            prefs.begin("myPrefs", false);
+            String mountPoint = cmdWords[4];
+            prefs.putString("NTRIP_MOUNTPOINT", mountPoint);
+            prefs.end();
             return CMD_ACTION_NONE;
         }
-        if (cmdWords[3] == "SET" && cmdWords[4] == "CSTRAUTH") {
+        if (cmdWords[2] == "SET" && cmdWords[3] == "CSTRAUTH") {
             // Will be implemented later
             Serial.println("This command is not yet implemented.");
             return CMD_ACTION_NONE;

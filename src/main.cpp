@@ -3,6 +3,8 @@
 #include "functions/cmd_handler.h"
 
 // ================= ĐỊNH NGHĨA CÁC BIẾN TOÀN CỤC =================
+Preferences prefs;
+
 extern PubSubClient mqtt;
 #if CONNECT_USING_4G && RTCM_COMMUNICATION_PROTOCOL==TCP_IP
 extern TinyGsmClient ntripClient;
@@ -24,6 +26,8 @@ SemaphoreHandle_t rtcmBufferMutex = nullptr;
 SemaphoreHandle_t tcpStreamMutex = nullptr;
 
 /* ===================== NGUYÊN MẪU HÀM ======================== */
+
+void initPrefs();
 
 #if RTCM_COMMUNICATION_PROTOCOL == LORA_SERIAL
 __attribute__((noreturn)) void taskLora(void* parameter);
@@ -86,6 +90,19 @@ void setup()
     Serial.println("\n=========================================");
     Serial.println("     ESP32 GNSS GATEWAY KHOI DONG        ");
     Serial.println("=========================================");
+
+    delay(1000);
+    // Khởi tạo Preferences
+    prefs.begin("myPrefs"); // false: read/write mode
+    bool notFirstBoot = prefs.getBool("NOT_FIRST_BOOT", false);
+    if (!notFirstBoot) {
+        Serial.println("[SETUP] Khoi tao Preferences lan dau tien...");
+        initPrefs();
+    }
+    else {
+        Serial.println("[SETUP] Preferences da duoc khoi tao truoc do, khong can khoi tao lai.");
+    }
+    prefs.end();
 
     // Khởi tạo giao tiếp với UM980
     Serial1.begin(GNSS_BAUD, SERIAL_8N1, RX_GNSS, TX_GNSS);
@@ -401,4 +418,27 @@ void loop() {
     #endif
     // MQTT loop handled in dedicated task `taskMQTT`
     vTaskDelay(pdMS_TO_TICKS(1000)); // loop trống, tất cả logic đã được xử lý trong các task
+}
+
+void initPrefs() {
+    prefs.putBool("NOT_FIRST_BOOT", true);
+    prefs.putUChar("TX_TO_MODEM_RX", 17);
+    prefs.putUChar("RX_TO_MODEM_TX", 16);
+    prefs.putUChar("MODEM_DC_PIN", 15);
+    prefs.putUChar("MODEM_DTR_PIN", 4);
+    prefs.putString("APN", "v-internet");
+    prefs.putString("GPRS_USER", "");
+    prefs.putString("GPRS_PASS", "");
+    prefs.putInt("NTRIP_MODE", 1);
+    prefs.putString("NTRIP_SERVER", "ntrip.aitogy.com");
+    prefs.putInt("NTRIP_PORT", 2101);
+    prefs.putString("NTRIP_MOUNTPOINT", "/test");
+    prefs.putString("NTRIP_AUTH_BASE_STATION", "12345");
+    prefs.putString("MQTT_SERVER", "aitogy.asia");
+    prefs.putInt("MQTT_PORT", 1883);
+    prefs.putString("MQTT_USER", "mqttUser");
+    prefs.putString("MQTT_PASS", "MqttPassword123$%^");
+    prefs.putString("TOPIC_SUB_CMD", "tdm2402/um980_base_001/cmd");
+    prefs.putString("TOPIC_PUB_RAW_RTCM", "tdm2402/um980_base_001/raw/last_rtcm");
+    prefs.putString("TOPIC_PUB_HEALTH", "tdm2402/um980_base_001/health");
 }

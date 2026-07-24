@@ -3,8 +3,10 @@
 
 #include "functions/NTRIP_Handler_IP.h"
 #include "Prog_Config.h"
+#include <Preferences.h>
 
 // ================= BIẾN TOÀN CỤC =================
+extern Preferences prefs;
 static bool isIcyOk = false;
 static unsigned long lastReconnect = 0;
 static bool isNmeaSent = false; // Cờ kiểm tra xem đã gửi NMEA xác thực chưa
@@ -243,13 +245,17 @@ int connectNTRIP() {
   Serial.println(NTRIP_CASTER_IP);
 
   ntripClient.stop();
+  
+  prefs.begin("myPrefs", true);
+  String ntripMountpoint = prefs.getString("NTRIP_MOUNTPOINT", NTRIP_MOUNTPOINT);
+  prefs.end();
 
   if (ntripClient.connect(NTRIP_CASTER_IP, NTRIP_CASTER_PORT)) {
     delay(1000); // Đợi một chút để đảm bảo kết nối ổn định
     Serial.println("[NTRIP] Da ket noi TCP! Dang gui Header...");
     
     sendRequest:
-    String request = "SOURCE " + String(NTRIP_AUTH_BASE_STATION) + " " + String(NTRIP_MOUNTPOINT) + " \r\n"
+    String request = "SOURCE " + String(NTRIP_AUTH_BASE_STATION) + " " + String(ntripMountpoint) + " \r\n"
           + "Source-Agent: NTRIP NtripServerCMD/1.0\r\n\r\n";
     ntripClient.print(request);
 

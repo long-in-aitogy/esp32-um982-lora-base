@@ -37,6 +37,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     switch (action) {
       case CMD_ACTION_PASS_TO_GNSS_MODULE:
         Serial.println("[MQTT DOWNLINK] Gui lenh den UM980 qua Serial1");
+        Serial.flush();
         for (const auto& word : cmdWords) {
           Serial1.print(word);
           Serial1.print(" ");

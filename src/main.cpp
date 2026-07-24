@@ -432,13 +432,13 @@ void initPrefs() {
     prefs.putInt("NTRIP_MODE", 1);
     prefs.putString("NTRIP_SERVER", "ntrip.aitogy.com");
     prefs.putInt("NTRIP_PORT", 2101);
-    prefs.putString("NTRIP_MOUNTPOINT", "/test");
-    prefs.putString("NTRIP_AUTH_BASE_STATION", "12345");
+    prefs.putString("NTRIP_MPT", "/test");
+    prefs.putString("NT_AUTH_BS", "12345");
     prefs.putString("MQTT_SERVER", "aitogy.asia");
     prefs.putInt("MQTT_PORT", 1883);
     prefs.putString("MQTT_USER", "mqttUser");
     prefs.putString("MQTT_PASS", "MqttPassword123$%^");
     prefs.putString("TOPIC_SUB_CMD", "tdm2402/um980_base_001/cmd");
-    prefs.putString("TOPIC_PUB_RAW_RTCM", "tdm2402/um980_base_001/raw/last_rtcm");
-    prefs.putString("TOPIC_PUB_HEALTH", "tdm2402/um980_base_001/health");
+    prefs.putString("TPC_RAW_RTCM", "tdm2402/um980_base_001/raw/last_rtcm");
+    prefs.putString("TPC_HEALTH", "tdm2402/um980_base_001/health");
 }

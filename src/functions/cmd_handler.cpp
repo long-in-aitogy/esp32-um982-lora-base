@@ -84,7 +84,7 @@ cmd_action_t handleCommand(std::vector<String> &cmdWords) {
         if (cmdWords[2] == "SET" && cmdWords[3] == "MNTPNT") {
             prefs.begin("myPrefs", false);
             String mountPoint = cmdWords[4];
-            prefs.putString("NTRIP_MOUNTPOINT", mountPoint);
+            prefs.putString("NTRIP_MPT", mountPoint);
             prefs.end();
             return CMD_ACTION_NONE;
         }

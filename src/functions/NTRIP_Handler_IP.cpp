@@ -247,7 +247,7 @@ int connectNTRIP() {
   ntripClient.stop();
   
   prefs.begin("myPrefs", true);
-  String ntripMountpoint = prefs.getString("NTRIP_MOUNTPOINT", NTRIP_MOUNTPOINT);
+  String ntripMountpoint = prefs.getString("NTRIP_MPT", NTRIP_MOUNTPOINT);
   prefs.end();
 
   if (ntripClient.connect(NTRIP_CASTER_IP, NTRIP_CASTER_PORT)) {

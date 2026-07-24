@@ -32,6 +32,7 @@ __attribute__((noreturn)) void taskRtcm(void* parameter);
 __attribute__((noreturn)) void taskNtrip(void* parameter);
 #endif
 __attribute__((noreturn)) void healthCheckTask(void* parameter);
+__attribute__((noreturn)) void taskMQTT(void* parameter);
 
 #if CONNECT_USING_4G && RTCM_COMMUNICATION_PROTOCOL == TCP_IP
 static void settleModemBeforeNtrip() {
@@ -47,6 +48,28 @@ static void settleModemBeforeNtrip() {
     Serial.println("[SETUP][NTRIP] Modem da on dinh, bat dau ket noi NTRIP.");
 }
 #endif
+
+__attribute__((noreturn)) void taskMQTT(void* parameter) {
+    Serial.println("[MQTT TASK] Bat dau task MQTT...");
+    while (true) {
+        // Prefer to take tcpStreamMutex when available to serialize network operations
+        if (tcpStreamMutex != nullptr) {
+            if (xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
+                if (!mqtt.connected()) {
+                    Serial.println("[MQTT TASK] MQTT mat ket noi, dang ket noi lai...");
+                    connectMQTT();
+                } else {
+                    mqtt.loop();
+                }
+                xSemaphoreGive(tcpStreamMutex);
+            }
+        } else {
+            // no tcpStreamMutex available, just keep the loop running
+            if (mqtt.connected()) mqtt.loop();
+        }
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+}
 
 /* ==================SETUP VÀ LOOP======================== */
 
@@ -132,6 +155,10 @@ void setup()
     }
     Serial.println("[SETUP] Tao mutex tcpStreamMutex thanh cong!");
     #endif
+
+    Serial.println("[SETUP] Task MQTT: Quan ly ket noi MQTT va callback.");
+    xTaskCreatePinnedToCore(taskMQTT, "MQTT Task", 4096, nullptr, 3, nullptr, 1);
+    Serial.println("[SETUP] Da khoi dong Task MQTT!");
 
     #if RTCM_COMMUNICATION_PROTOCOL == LORA_SERIAL
     Serial.println("[SETUP] Task LoRa: Truyen du lieu RTCM qua LoRa.");
@@ -332,41 +359,14 @@ __attribute__((noreturn)) void healthCheckTask(void* parameter) {
         Serial.println("[HEALTH CHECK] Kiem tra ket noi MQTT de gui thong tin suc khoe...");
         #endif
 
-        if (xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
-            // Perform MQTT operations here
-            
-            if (!mqtt.connected()) {
-                digitalWrite(LED_PIN, HIGH);
-                Serial.println("[HEALTH CHECK] MQTT mat ket noi, dang thu ket noi lai...");
-                connectMQTT();
-                digitalWrite(LED_PIN, LOW);
-            }
-            vTaskDelay(1);
-
+        // Publish health and any latest RTCM via thread-safe helpers.
+        // The helpers will wait for MQTT connection and take the tcpStreamMutex.
+        publishHealth(healthPayload);
+        if (!latestRtcm.isEmpty()) {
             #if PROGRAM_DEBUG
-            Serial.println("[HEALTH CHECK] MQTT dang ket noi, dang kich hoat loop...");
+            Serial.println("[GNSS PUBLISH] Dang gui du lieu NMEA len MQTT...");
             #endif
-
-            mqtt.loop();
-
-            #if PROGRAM_DEBUG
-            Serial.println("[HEALTH CHECK] Dang gui thong tin suc khoe len MQTT...");
-            #endif
-
-            publishHealth(healthPayload);
-
-            if (!latestRtcm.isEmpty()) {
-                #if PROGRAM_DEBUG
-                Serial.println("[GNSS PUBLISH] Dang kich hoat loop...");
-                #endif
-                mqtt.loop();
-                #if PROGRAM_DEBUG
-                Serial.println("[GNSS PUBLISH] Dang gui du lieu NMEA len MQTT...");
-                #endif
-                publishRaw(latestRtcm); // publishRaw accepts String&
-            }
-
-            xSemaphoreGive(tcpStreamMutex);
+            publishRaw(latestRtcm); // publishRaw accepts String&
         }
         vTaskDelay(1);
         if (HEALTH_INTERVAL > (millis() - loopStartTime)) {
@@ -399,8 +399,6 @@ void loop() {
         digitalWrite(LED_PIN, LOW);
     }
     #endif
-    if (mqtt.connected()) {
-        mqtt.loop();
-    }
+    // MQTT loop handled in dedicated task `taskMQTT`
     vTaskDelay(pdMS_TO_TICKS(1000)); // loop trống, tất cả logic đã được xử lý trong các task
 }

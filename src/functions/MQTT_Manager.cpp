@@ -84,19 +84,54 @@ int connectMQTT() {
 }
 
 int publishRaw(const String& payload) {
-  if (mqtt.connected() && payload.length() > 0) {
-    mqtt.publish(TOPIC_PUB_RAW_RTCM, payload.c_str());
-    Serial.println("[UM982 GNSS RAW CORRECTION DATA] Da publish thanh cong !");
-    return 0;
+  if (payload.length() == 0) return -1;
+
+  // Wait for MQTT connection (timeout after 5s)
+  const uint32_t start = millis();
+  while (!mqtt.connected()) {
+    vTaskDelay(pdMS_TO_TICKS(100));
+    if (millis() - start > 5000) {
+      Serial.println("[MQTT] publishRaw: MQTT not connected, aborting publish");
+      return -1;
+    }
+  }
+
+  // Take tcpStreamMutex before publishing to avoid concurrent network ops
+  if (tcpStreamMutex != nullptr && xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
+    bool ok = mqtt.publish(TOPIC_PUB_RAW_RTCM, payload.c_str());
+    xSemaphoreGive(tcpStreamMutex);
+    if (ok) {
+      Serial.println("[UM982 GNSS RAW CORRECTION DATA] Da publish thanh cong !");
+      return 0;
+    }
+    return -1;
   }
   return -1;
 }
 
 int publishHealth(const String& payload) {
-  mqtt.publish(TOPIC_PUB_HEALTH, payload.c_str());
-  Serial.print("[MQTT] Da gui thong tin suc khoe len topic: ");
-  Serial.println(TOPIC_PUB_HEALTH);
-  return 0;
+  if (payload.length() == 0) return -1;
+
+  const uint32_t start = millis();
+  while (!mqtt.connected()) {
+    vTaskDelay(pdMS_TO_TICKS(100));
+    if (millis() - start > 5000) {
+      Serial.println("[MQTT] publishHealth: MQTT not connected, aborting publish");
+      return -1;
+    }
+  }
+
+  if (tcpStreamMutex != nullptr && xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
+    bool ok = mqtt.publish(TOPIC_PUB_HEALTH, payload.c_str());
+    xSemaphoreGive(tcpStreamMutex);
+    if (ok) {
+      Serial.print("[MQTT] Da gui thong tin suc khoe len topic: ");
+      Serial.println(TOPIC_PUB_HEALTH);
+      return 0;
+    }
+    return -1;
+  }
+  return -1;
 }
 
 bool isMqttConnected() {

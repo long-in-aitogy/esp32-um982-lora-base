@@ -22,11 +22,15 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     String cmd = "";
     for (int i = 0; i < length; i++) cmd += (char)payload[i];
     
+    #if PROGRAM_DEBUG
     Serial.print("\n[MQTT DOWNLINK] Lenh: ");
     Serial.println(cmd);
+    #endif
 
     if (cmd.isEmpty()) {
+      #if PROGRAM_DEBUG
       Serial.println("[MQTT DOWNLINK] Lenh rong, khong xu ly.");
+      #endif
       return;
     }
     
@@ -44,9 +48,11 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         }
         Serial1.print("\r\n");
 
+        #if PROGRAM_DEBUG
         gnssResponse = Serial1.readStringUntil('\n');
         Serial.print("[UM980 RESPONSE] ");
         Serial.println(gnssResponse);
+        #endif
         break;
 
       case CMD_ACTION_ESP_RESTART:
@@ -85,7 +91,7 @@ int connectMQTT() {
 }
 
 int publishRaw(const String& payload) {
-  if (payload.length() == 0) return -1;
+  if (payload.isEmpty()) return -1;
 
   // Wait for MQTT connection (timeout after 5s)
   const uint32_t start = millis();
@@ -111,13 +117,15 @@ int publishRaw(const String& payload) {
 }
 
 int publishHealth(const String& payload) {
-  if (payload.length() == 0) return -1;
+  if (payload.isEmpty()) return -1;
 
   const uint32_t start = millis();
   while (!mqtt.connected()) {
     vTaskDelay(pdMS_TO_TICKS(100));
     if (millis() - start > 5000) {
+      #if PROGRAM_DEBUG
       Serial.println("[MQTT] publishHealth: MQTT not connected, aborting publish");
+      #endif
       return -1;
     }
   }
@@ -126,8 +134,10 @@ int publishHealth(const String& payload) {
     bool ok = mqtt.publish(TOPIC_PUB_HEALTH, payload.c_str());
     xSemaphoreGive(tcpStreamMutex);
     if (ok) {
+      #if PROGRAM_DEBUG
       Serial.print("[MQTT] Da gui thong tin suc khoe len topic: ");
       Serial.println(TOPIC_PUB_HEALTH);
+      #endif
       return 0;
     }
     return -1;

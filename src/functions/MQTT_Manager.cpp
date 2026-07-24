@@ -1,6 +1,7 @@
 #include "functions/MQTT_Manager.h"
 #include "Top_Lvl_Config.h"
 #include "Prog_Config.h"
+#include "functions/cmd_handler.h"
 
 // ================= ĐỊNH NGHĨA CÁC ĐỐI TƯỢNG CẦN CHO KẾT NỐI =================
 #if CONNECT_USING_WIFI
@@ -17,15 +18,45 @@ PubSubClient mqtt(espClient);
 // ================= ĐỊNH NGHĨA HÀM =================
 
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
-  String cmd = "";
-  for (int i = 0; i < length; i++) cmd += (char)payload[i];
-  
-  Serial.print("\n[MQTT DOWNLINK] Lenh: ");
-  Serial.println(cmd);
-  
-  // Đẩy lệnh xuống UM980 qua Serial1
-  Serial1.print(cmd);
-  Serial1.print("\r\n");
+  if (strcmp(topic, TOPIC_SUB_CMD) == 0) {
+    String cmd = "";
+    for (int i = 0; i < length; i++) cmd += (char)payload[i];
+    
+    Serial.print("\n[MQTT DOWNLINK] Lenh: ");
+    Serial.println(cmd);
+
+    if (cmd.isEmpty()) {
+      Serial.println("[MQTT DOWNLINK] Lenh rong, khong xu ly.");
+      return;
+    }
+    
+    // Đẩy lệnh xuống UM980 qua Serial1
+    std::vector<String> cmdWords = splitCommand(cmd);
+    cmd_action_t action = handleCommand(cmdWords);
+    String gnssResponse = "";
+    switch (action) {
+      case CMD_ACTION_PASS_TO_GNSS_MODULE:
+        Serial.println("[MQTT DOWNLINK] Gui lenh den UM980 qua Serial1");
+        for (const auto& word : cmdWords) {
+          Serial1.print(word);
+          Serial1.print(" ");
+        }
+        Serial1.print("\r\n");
+
+        gnssResponse = Serial1.readStringUntil('\n');
+        Serial.print("[UM980 RESPONSE] ");
+        Serial.println(gnssResponse);
+        break;
+
+      case CMD_ACTION_ESP_RESTART:
+        Serial.println("[ESP32] Khoi dong lai ESP32...");
+        ESP.restart();
+        break;
+
+      default:
+        break;
+    }
+  }
 }
 
 int setupMQTT() {

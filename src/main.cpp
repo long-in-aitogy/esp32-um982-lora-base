@@ -399,5 +399,8 @@ void loop() {
         digitalWrite(LED_PIN, LOW);
     }
     #endif
+    if (mqtt.connected()) {
+        mqtt.loop();
+    }
     vTaskDelay(pdMS_TO_TICKS(1000)); // loop trống, tất cả logic đã được xử lý trong các task
 }

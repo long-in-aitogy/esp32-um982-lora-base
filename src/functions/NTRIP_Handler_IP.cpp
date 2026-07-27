@@ -28,10 +28,7 @@ extern SemaphoreHandle_t tcpStreamMutex;
 
 // ================= ĐỊNH NGHĨA HÀM =================
 
-int setupNTRIP() {
-  isIcyOk = false;
-  isNmeaSent = false;
-
+int boostrapNTRIP() {
   char nmeaCmdUnlog[] = "UNLOG\r\n";
   // char nmeaCmdSetBase[] = "MODE BASE -1618563.4772 5730003.6935 2278811.0631\r\n";
   char nmeaCmdSetBase[] = "MODE BASE TIME 120 2.5\r\n";
@@ -232,7 +229,12 @@ int setupNTRIP() {
   Serial.println("[NMEA CMD] Response: " + nmeaResponse);
   #endif
   delay(20);
+  return 0;
+}
 
+int setupNTRIP() {
+  isIcyOk = false;
+  isNmeaSent = false;
   return 0;
 }
 

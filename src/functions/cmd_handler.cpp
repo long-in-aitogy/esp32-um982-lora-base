@@ -50,35 +50,68 @@ cmd_action_t handleCommand(std::vector<String> &cmdWords) {
     }
     if (cmdWords[1] == "MQTT") {
         if (cmdWords[2] == "SET" && cmdWords[3] == "SERVER") {
-            // Will be implemented later
-            Serial.println("This command is not yet implemented.");
+            prefs.begin("myPrefs", false);
+            String serverAddress = cmdWords[4];
+            prefs.putString("MQTT_SERVER", serverAddress);
+            prefs.end();
+            return CMD_ACTION_NONE;
+        }
+        if (cmdWords[2] == "SET" && cmdWords[3] == "PORT") {
+            prefs.begin("myPrefs", false);
+            auto port = (uint16_t)(cmdWords[4].toInt());
+            prefs.putUShort("MQTT_PORT", port);
+            prefs.end();    
+            return CMD_ACTION_NONE;
+        }
+        if (cmdWords[2] == "SET" && cmdWords[3] == "USER") {
+            prefs.begin("myPrefs", false);
+            String user = cmdWords[4];
+            prefs.putString("MQTT_USER", user);
+            prefs.end();
+            return CMD_ACTION_NONE;
+        }
+        if (cmdWords[2] == "SET" && cmdWords[3] == "PASS") {
+            prefs.begin("myPrefs", false);
+            String pass = cmdWords[4];
+            prefs.putString("MQTT_PASS", pass);
+            prefs.end();
             return CMD_ACTION_NONE;
         }
         if (cmdWords[2] == "SET" && cmdWords[3] == "PUBTPCHEALTH") {
-            // Will be implemented later
-            Serial.println("This command is not yet implemented.");
+            prefs.begin("myPrefs", false);
+            String topic = cmdWords[4];
+            prefs.putString("TPC_HEALTH", topic);
+            prefs.end();
             return CMD_ACTION_NONE;
         }
         if (cmdWords[2] == "SET" && cmdWords[3] == "PUBTPCRAW") {
-            // Will be implemented later
-            Serial.println("This command is not yet implemented.");
+            prefs.begin("myPrefs", false);
+            String topic = cmdWords[4];
+            prefs.putString("TPC_RAW_RTCM", topic);
+            prefs.end();
             return CMD_ACTION_NONE;
         }
         if (cmdWords[2] == "SET" && cmdWords[3] == "SUBTPCCMD") {
-            // Will be implemented later
-            Serial.println("This command is not yet implemented.");
+            prefs.begin("myPrefs", false);
+            String topic = cmdWords[4];
+            prefs.putString("TPC_SUB_CMD", topic);
+            prefs.end();
             return CMD_ACTION_NONE;
         }
     }
     if (cmdWords[1] == "NTRIP") {
         if (cmdWords[2] == "SET" && cmdWords[3] == "CSTRADDR") {
-            // Will be implemented later
-            Serial.println("This command is not yet implemented.");
+            prefs.begin("myPrefs", false);
+            String serverAddress = cmdWords[4];
+            prefs.putString("NTRIP_SERVER", serverAddress);
+            prefs.end();
             return CMD_ACTION_NONE;
         }
         if (cmdWords[2] == "SET" && cmdWords[3] == "CSTRPORT") {
-            // Will be implemented later
-            Serial.println("This command is not yet implemented.");
+            prefs.begin("myPrefs", false);
+            auto port = (uint16_t)(cmdWords[4].toInt());
+            prefs.putUShort("NTRIP_PORT", port);
+            prefs.end();    
             return CMD_ACTION_NONE;
         }
         if (cmdWords[2] == "SET" && cmdWords[3] == "MNTPNT") {
@@ -89,8 +122,10 @@ cmd_action_t handleCommand(std::vector<String> &cmdWords) {
             return CMD_ACTION_NONE;
         }
         if (cmdWords[2] == "SET" && cmdWords[3] == "CSTRAUTH") {
-            // Will be implemented later
-            Serial.println("This command is not yet implemented.");
+            prefs.begin("myPrefs", false);
+            String auth = cmdWords[4];
+            prefs.putString("NTRIP_AUTH", auth);
+            prefs.end();
             return CMD_ACTION_NONE;
         }
     }

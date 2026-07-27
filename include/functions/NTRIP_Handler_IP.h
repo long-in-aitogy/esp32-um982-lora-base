@@ -12,6 +12,7 @@ extern SemaphoreHandle_t tcpStreamMutex;
 // =============== KHAI BÁO HÀM =================
 
 int setupNTRIP();
+int boostrapNTRIP();
 int loopNTRIP(String& rtcmData);
 int connectNTRIP();
 bool isNtripConnected(); // Thêm hàm lấy trạng thái NTRIP

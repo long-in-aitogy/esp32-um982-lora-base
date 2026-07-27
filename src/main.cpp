@@ -92,6 +92,11 @@ void setup()
     Serial.println("=========================================");
 
     delay(1000);
+
+    // Khởi tạo giao tiếp với UM980
+    Serial1.begin(GNSS_BAUD, SERIAL_8N1, RX_GNSS, TX_GNSS);
+    Serial1.setTimeout(20);
+
     // Khởi tạo Preferences
     prefs.begin("myPrefs"); // false: read/write mode
     bool notFirstBoot = prefs.getBool("NOT_FIRST_BOOT", false);
@@ -104,9 +109,7 @@ void setup()
     }
     prefs.end();
 
-    // Khởi tạo giao tiếp với UM980
-    Serial1.begin(GNSS_BAUD, SERIAL_8N1, RX_GNSS, TX_GNSS);
-    Serial1.setTimeout(20);
+    // Khởi động mạng
     bool networkConnected = false;
 
     #ifndef NATIVE_BUILD
@@ -421,6 +424,7 @@ void loop() {
 }
 
 void initPrefs() {
+    prefs.clear();
     prefs.putBool("NOT_FIRST_BOOT", true);
     prefs.putUChar("TX_TO_MODEM_RX", 17);
     prefs.putUChar("RX_TO_MODEM_TX", 16);
@@ -431,14 +435,15 @@ void initPrefs() {
     prefs.putString("GPRS_PASS", "");
     prefs.putInt("NTRIP_MODE", 1);
     prefs.putString("NTRIP_SERVER", "ntrip.aitogy.com");
-    prefs.putInt("NTRIP_PORT", 2101);
+    prefs.putUShort("NTRIP_PORT", 2101);
     prefs.putString("NTRIP_MPT", "/test");
     prefs.putString("NT_AUTH_BS", "12345");
     prefs.putString("MQTT_SERVER", "aitogy.asia");
-    prefs.putInt("MQTT_PORT", 1883);
+    prefs.putUShort("MQTT_PORT", 1883);
     prefs.putString("MQTT_USER", "mqttUser");
     prefs.putString("MQTT_PASS", "MqttPassword123$%^");
-    prefs.putString("TOPIC_SUB_CMD", "tdm2402/um980_base_001/cmd");
+    prefs.putString("TPC_SUB_CMD", "tdm2402/um980_base_001/cmd");
     prefs.putString("TPC_RAW_RTCM", "tdm2402/um980_base_001/raw/last_rtcm");
     prefs.putString("TPC_HEALTH", "tdm2402/um980_base_001/health");
+    boostrapNTRIP();
 }

@@ -53,6 +53,14 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         Serial.print("[UM980 RESPONSE] ");
         Serial.println(gnssResponse);
         #endif
+
+        Serial1.print("SAVECONFIG\r\n");
+
+        #if PROGRAM_DEBUG
+        gnssResponse = Serial1.readStringUntil('\n');
+        Serial.print("[UM980 RESPONSE] ");
+        Serial.println(gnssResponse);
+        #endif
         break;
 
       case CMD_ACTION_ESP_RESTART:

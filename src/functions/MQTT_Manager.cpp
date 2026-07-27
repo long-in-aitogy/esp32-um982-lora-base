@@ -78,7 +78,11 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 }
 
 int setupMQTT() {
-  mqtt.setServer(MQTT_SERVER, MQTT_PORT);
+  prefs.begin("myPrefs", false);
+  String mqttServer = prefs.getString("MQTT_SERVER", MQTT_SERVER);
+  uint16_t mqttPort = prefs.getUShort("MQTT_PORT", MQTT_PORT);
+  prefs.end();
+  mqtt.setServer(mqttServer.c_str(), mqttPort);
   mqtt.setCallback(mqttCallback);
   return 0;
 }
@@ -87,11 +91,13 @@ int connectMQTT() {
   if (!mqtt.connected()) {
     Serial.println("\n[MQTT] Dang ket noi Broker...");
     String clientId = "ESP32_GW_" + String(random(0xffff), HEX);
-    if (mqtt.connect(clientId.c_str(), MQTT_USER, MQTT_PASS)) {
+    prefs.begin("myPrefs", false);
+    String mqttUser = prefs.getString("MQTT_USER", MQTT_USER);
+    String mqttPass = prefs.getString("MQTT_PASS", MQTT_PASS);
+    String topicSubCmd = prefs.getString("TPC_SUB_CMD", TOPIC_SUB_CMD);
+    prefs.end();
+    if (mqtt.connect(clientId.c_str(), mqttUser.c_str(), mqttPass.c_str())) {
       Serial.println("[MQTT] Da ket noi thanh cong!");
-      prefs.begin("myPrefs", false);
-      String topicSubCmd = prefs.getString("TPC_SUB_CMD", TOPIC_SUB_CMD);
-      prefs.end();
       mqtt.subscribe(topicSubCmd.c_str());
       return 0;
     } else {
@@ -119,7 +125,10 @@ int publishRaw(const String& payload) {
 
   // Take tcpStreamMutex before publishing to avoid concurrent network ops
   if (tcpStreamMutex != nullptr && xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
-    bool ok = mqtt.publish(TOPIC_PUB_RAW_RTCM, payload.c_str());
+    prefs.begin("myPrefs", false);
+    String topicPubRaw = prefs.getString("TPC_RAW_RTCM", TOPIC_PUB_RAW_RTCM);
+    prefs.end();
+    bool ok = mqtt.publish(topicPubRaw.c_str(), payload.c_str());
     xSemaphoreGive(tcpStreamMutex);
     if (ok) {
       Serial.println("[UM982 GNSS RAW CORRECTION DATA] Da publish thanh cong !");
@@ -145,12 +154,15 @@ int publishHealth(const String& payload) {
   }
 
   if (tcpStreamMutex != nullptr && xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
-    bool ok = mqtt.publish(TOPIC_PUB_HEALTH, payload.c_str());
+    prefs.begin("myPrefs", false);
+    String topicPubHealth = prefs.getString("TPC_HEALTH", TOPIC_PUB_HEALTH);
+    prefs.end();
+    bool ok = mqtt.publish(topicPubHealth.c_str(), payload.c_str());
     xSemaphoreGive(tcpStreamMutex);
     if (ok) {
       #if PROGRAM_DEBUG
       Serial.print("[MQTT] Da gui thong tin suc khoe len topic: ");
-      Serial.println(TOPIC_PUB_HEALTH);
+      Serial.println(topicPubHealth);
       #endif
       return 0;
     }

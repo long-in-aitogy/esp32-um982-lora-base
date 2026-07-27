@@ -250,7 +250,7 @@ int connectNTRIP() {
   
   prefs.begin("myPrefs", true);
   String ntripAddr = prefs.getString("NTRIP_SERVER", NTRIP_CASTER_IP);
-  String ntripAuth = prefs.getString("NTRIP_AUTH", NTRIP_AUTH_BASE_STATION);
+  String ntripAuth = prefs.getString("NT_AUTH_BS", NTRIP_AUTH_BASE_STATION);
   uint16_t ntripPort = prefs.getUShort("NTRIP_PORT", NTRIP_CASTER_PORT);
   String ntripMountpoint = prefs.getString("NTRIP_MPT", NTRIP_MOUNTPOINT);
   prefs.end();

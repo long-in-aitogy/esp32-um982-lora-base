@@ -26,7 +26,6 @@ void setup() {
     prefs.putString("APN", "v-internet");
     prefs.putString("GPRS_USER", "");
     prefs.putString("GPRS_PASS", "");
-    prefs.putInt("NTRIP_MODE", 1);
     prefs.putString("NTRIP_SERVER", "ntrip.aitogy.com");
     prefs.putInt("NTRIP_PORT", 2101);
     prefs.putString("NTRIP_MOUNTPOINT", "/test");

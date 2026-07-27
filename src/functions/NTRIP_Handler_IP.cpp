@@ -249,15 +249,18 @@ int connectNTRIP() {
   ntripClient.stop();
   
   prefs.begin("myPrefs", true);
+  String ntripAddr = prefs.getString("NTRIP_SERVER", NTRIP_CASTER_IP);
+  String ntripAuth = prefs.getString("NTRIP_AUTH", NTRIP_AUTH_BASE_STATION);
+  uint16_t ntripPort = prefs.getUShort("NTRIP_PORT", NTRIP_CASTER_PORT);
   String ntripMountpoint = prefs.getString("NTRIP_MPT", NTRIP_MOUNTPOINT);
   prefs.end();
 
-  if (ntripClient.connect(NTRIP_CASTER_IP, NTRIP_CASTER_PORT)) {
+  if (ntripClient.connect(ntripAddr.c_str(), ntripPort)) {
     delay(1000); // Đợi một chút để đảm bảo kết nối ổn định
     Serial.println("[NTRIP] Da ket noi TCP! Dang gui Header...");
     
     sendRequest:
-    String request = "SOURCE " + String(NTRIP_AUTH_BASE_STATION) + " " + String(ntripMountpoint) + " \r\n"
+    String request = "SOURCE " + ntripAuth + " " + ntripMountpoint + " \r\n"
           + "Source-Agent: NTRIP NtripServerCMD/1.0\r\n\r\n";
     ntripClient.print(request);
 

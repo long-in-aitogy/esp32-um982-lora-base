@@ -2,6 +2,7 @@
 #include "Top_Lvl_Config.h"
 #include "Prog_Config.h"
 #include "functions/cmd_handler.h"
+#include <Preferences.h>
 
 // ================= ĐỊNH NGHĨA CÁC ĐỐI TƯỢNG CẦN CHO KẾT NỐI =================
 #if CONNECT_USING_WIFI
@@ -14,6 +15,8 @@ extern TinyGsm modem;
 static TinyGsmClient espClient(modem, 1);
 #endif
 PubSubClient mqtt(espClient);
+
+extern Preferences prefs;
 
 // ================= ĐỊNH NGHĨA HÀM =================
 
@@ -86,7 +89,10 @@ int connectMQTT() {
     String clientId = "ESP32_GW_" + String(random(0xffff), HEX);
     if (mqtt.connect(clientId.c_str(), MQTT_USER, MQTT_PASS)) {
       Serial.println("[MQTT] Da ket noi thanh cong!");
-      mqtt.subscribe(TOPIC_SUB_CMD);
+      prefs.begin("myPrefs", false);
+      String topicSubCmd = prefs.getString("TPC_SUB_CMD", TOPIC_SUB_CMD);
+      prefs.end();
+      mqtt.subscribe(topicSubCmd.c_str());
       return 0;
     } else {
       Serial.print("[MQTT] Loi rc=");

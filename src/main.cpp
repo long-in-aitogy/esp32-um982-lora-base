@@ -100,14 +100,15 @@ void setup()
 
     // Khởi tạo Preferences
     prefs.begin("myPrefs"); // false: read/write mode
-    bool notFirstBoot = prefs.getBool("NOT_FIRST_BOOT", false);
-    if (!notFirstBoot) {
+    bool needReset = prefs.getBool("NEED_RESET", true);
+    if (needReset) {
         Serial.println("[SETUP] Khoi tao Preferences lan dau tien...");
         initPrefs();
     }
     else {
         Serial.println("[SETUP] Preferences da duoc khoi tao truoc do, khong can khoi tao lai.");
     }
+
     gnssTX = prefs.getInt("GNSS_TX", TX_GNSS);
     gnssRX = prefs.getInt("GNSS_RX", RX_GNSS);
     rx2ModemTX = prefs.getInt("RX_TO_MODEM_TX", RX_TO_MODEM_TX);
@@ -118,11 +119,11 @@ void setup()
     Serial1.begin(GNSS_BAUD, SERIAL_8N1, (uint8_t)gnssRX, (uint8_t)gnssTX);
     Serial1.setTimeout(20);
 
-    if (notFirstBoot) {
-        Serial.println("[SETUP] Da cau hinh GNSS chip, khong can cau hinh lai.");
-    } else {
+    if (needReset) {
         Serial.println("[SETUP] Khoi tao Preferences lan dau tien...");
         boostrapNTRIP();
+    } else {
+        Serial.println("[SETUP] Da cau hinh GNSS chip, khong can cau hinh lai.");
     }
 
     // Khởi động mạng
@@ -441,16 +442,16 @@ void loop() {
 
 void initPrefs() {
     prefs.clear();
-    prefs.putBool("NOT_FIRST_BOOT", true);
+    prefs.putBool("NEED_RESET", false);
     prefs.putUChar("TX_TO_MODEM_RX", 17); // chưa cấu hình được, lấy được
     prefs.putUChar("RX_TO_MODEM_TX", 16); // chưa cấu hình được, lấy được
     prefs.putUChar("MODEM_DC_PIN", 15); // chưa cấu hình đc, chưa lấy đc
     prefs.putUChar("MODEM_DTR_PIN", 4); // chưa cấu hình đc, chưa lấy đc
-    prefs.putString("APN", "v-internet"); // chưa cấu hình đc, chưa lấy đc
-    prefs.putString("GPRS_USER", ""); // chưa cấu hình đc, chưa lấy đc
-    prefs.putString("GPRS_PASS", ""); // chưa cấu hình đc, chưa lấy đc
-    prefs.putInt("GNSS_TX", 27); // chưa cấu hình được, lấy được
-    prefs.putInt("GNSS_RX", 26); // chưa cấu hình được, lấy được
+    prefs.putString("APN", "v-internet"); // cấu hình đc, chưa lấy đc
+    prefs.putString("GPRS_USER", ""); // cấu hình đc, chưa lấy đc
+    prefs.putString("GPRS_PASS", ""); // cấu hình đc, chưa lấy đc
+    prefs.putInt("GNSS_TX", 27); // cấu hình được, lấy được
+    prefs.putInt("GNSS_RX", 26); // cấu hình được, lấy được
     prefs.putString("NTRIP_SERVER", "ntrip.aitogy.com"); // cấu hình được, lấy được
     prefs.putUShort("NTRIP_PORT", 2101); // cấu hình được, lấy được
     prefs.putString("NTRIP_MPT", "/test"); // cấu hình được, lấy được

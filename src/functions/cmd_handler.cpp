@@ -45,6 +45,46 @@ cmd_action_t handleCommand(std::vector<String> &cmdWords) {
             Serial.println("[MQTT DOWNLINK] Lenh yeu cau khoi dong lai ESP32");
             return CMD_ACTION_ESP_RESTART;
         }
+        if (cmdWords[0] == "SET" && cmdWords[1] == "GNSS" && cmdWords[2] == "TX") {
+            Serial.println("[MQTT DOWNLINK] Lenh yeu cau cau hinh GNSS TX");
+            prefs.begin("myPrefs", false);
+            int gnssTX = cmdWords[3].toInt();
+            prefs.putInt("GNSS_TX", gnssTX);
+            prefs.end();
+            return CMD_ACTION_NONE;
+        }
+        if (cmdWords[0] == "SET" && cmdWords[1] == "GNSS" && cmdWords[2] == "RX") {
+            Serial.println("[MQTT DOWNLINK] Lenh yeu cau cau hinh GNSS RX");
+            prefs.begin("myPrefs", false);
+            int gnssRX = cmdWords[3].toInt();
+            prefs.putInt("GNSS_RX", gnssRX);
+            prefs.end();
+            return CMD_ACTION_NONE;
+        }
+        if (cmdWords[0] == "SET" && cmdWords[1] == "4G" && cmdWords[2] == "APN") {
+            Serial.println("[MQTT DOWNLINK] Lenh yeu cau cau hinh 4G APN");
+            prefs.begin("myPrefs", false);
+            String apn = cmdWords[3];
+            prefs.putString("APN", apn);
+            prefs.end();
+            return CMD_ACTION_NONE;
+        }
+        if (cmdWords[0] == "SET" && cmdWords[1] == "4G" && cmdWords[2] == "USER") {
+            Serial.println("[MQTT DOWNLINK] Lenh yeu cau cau hinh 4G USER");
+            prefs.begin("myPrefs", false);
+            String user = cmdWords[3];
+            prefs.putString("GPRS_USER", user);
+            prefs.end();
+            return CMD_ACTION_NONE;
+        }
+        if (cmdWords[0] == "SET" && cmdWords[1] == "4G" && cmdWords[2] == "PASS") {
+            Serial.println("[MQTT DOWNLINK] Lenh yeu cau cau hinh 4G PASS");
+            prefs.begin("myPrefs", false);
+            String pass = cmdWords[3];
+            prefs.putString("GPRS_PASS", pass);
+            prefs.end();
+            return CMD_ACTION_NONE;
+        }
         Serial.println("This command is not yet implemented.");
         return CMD_ACTION_NONE;
     }
@@ -127,6 +167,15 @@ cmd_action_t handleCommand(std::vector<String> &cmdWords) {
             prefs.putString("NTRIP_AUTH", auth);
             prefs.end();
             return CMD_ACTION_NONE;
+        }
+    }
+    if (cmdWords[1] == "CONFIG") {
+        if (cmdWords[2] == "RESET") {
+            Serial.println("[MQTT DOWNLINK] Lenh yeu cau reset ve cau hinh mac dinh");
+            prefs.begin("myPrefs", false);
+            prefs.putBool("NEED_RESET", true);
+            prefs.end();
+            return CMD_ACTION_ESP_RESTART;
         }
     }
     Serial.println("Unknown command: " + cmdWords[1]);

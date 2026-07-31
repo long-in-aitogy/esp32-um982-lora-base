@@ -122,6 +122,8 @@ void setup()
     if (needReset) {
         Serial.println("[SETUP] Cau hinh UM980 lan dau tien...");
         boostrapNTRIP();
+        Serial.println("[SETUP] Da cau hinh lai tat ca ve mac dinh, khoi dong lai de ap dung cau hinh.");
+        ESP.restart(); // Khởi động lại để áp dụng cấu hình mới
     } else {
         Serial.println("[SETUP] Da cau hinh GNSS chip, khong can cau hinh lai.");
     }

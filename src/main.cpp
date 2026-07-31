@@ -33,6 +33,9 @@ SemaphoreHandle_t tcpStreamMutex = nullptr;
 /* ===================== NGUYÊN MẪU HÀM ======================== */
 
 void initPrefs();
+#if CONNECT_USING_4G && RTCM_COMMUNICATION_PROTOCOL == TCP_IP
+static void settleModemBeforeNtrip();
+#endif
 
 #if RTCM_COMMUNICATION_PROTOCOL == LORA_SERIAL
 __attribute__((noreturn)) void taskLora(void* parameter);
@@ -43,67 +46,12 @@ __attribute__((noreturn)) void taskNtrip(void* parameter);
 __attribute__((noreturn)) void healthCheckTask(void* parameter);
 __attribute__((noreturn)) void taskMQTT(void* parameter);
 
-#if CONNECT_USING_4G && RTCM_COMMUNICATION_PROTOCOL == TCP_IP
-static void settleModemBeforeNtrip() {
-    Serial.println("[SETUP][NTRIP] Cho modem on dinh truoc khi bat tay NTRIP...");
-    const uint32_t settleStart = millis();
-    const uint32_t settleDurationMs = 600;
-
-    while (millis() - settleStart < settleDurationMs) {
-        modem.maintain();
-        delay(20);
-    }
-
-    Serial.println("[SETUP][NTRIP] Modem da on dinh, bat dau ket noi NTRIP.");
-}
-
-void shutdownTcpTransportBeforeRestart() {
-    Serial.println("[SETUP] Dong cac ket noi TCP va GPRS truoc khi khoi dong lai...");
-    mqtt.disconnect();
-    ntripClient.stop();
-    if (modem.isGprsConnected()) {
-        modem.gprsDisconnect();
-    }
-    delay(500);
-}
-#endif
-
-__attribute__((noreturn)) void taskMQTT(void* parameter) {
-    Serial.println("[MQTT TASK] Bat dau task MQTT...");
-    while (true) {
-        // Prefer to take tcpStreamMutex when available to serialize network operations
-        if (tcpStreamMutex != nullptr) {
-            if (xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
-                if (!mqtt.connected()) {
-                    Serial.println("[MQTT TASK] MQTT mat ket noi, dang ket noi lai...");
-                    if (++mqttDisconnectCount >= CONNECTION_FAIL_LIMIT) {
-                        Serial.println("[MQTT TASK][ERROR] MQTT mat ket noi qua 5 lan, khoi dong lai ESP32...");
-                        shutdownTcpTransportBeforeRestart();
-                        ESP.restart();
-                    }
-                    connectMQTT();
-                } else {
-                    mqttDisconnectCount = 0;
-                    mqtt.loop();
-                }
-                xSemaphoreGive(tcpStreamMutex);
-            }
-        } else {
-            // no tcpStreamMutex available, just keep the loop running
-            if (mqtt.connected()) {
-                mqttDisconnectCount = 0;
-                mqtt.loop();
-            } else if (++mqttDisconnectCount >= CONNECTION_FAIL_LIMIT) {
-                Serial.println("[MQTT TASK][ERROR] MQTT mat ket noi qua 5 lan, khoi dong lai ESP32...");
-                shutdownTcpTransportBeforeRestart();
-                ESP.restart();
-            }
-        }
-        vTaskDelay(pdMS_TO_TICKS(100));
-    }
-}
-
 /* ==================SETUP VÀ LOOP======================== */
+
+int gnssTX; 
+int gnssRX;
+int rx2ModemTX;
+int tx2ModemRX;
 
 void setup()
 {
@@ -120,11 +68,6 @@ void setup()
     Serial.println("=========================================");
 
     delay(1000);
-
-    int gnssTX; 
-    int gnssRX;
-    int rx2ModemTX;
-    int tx2ModemRX;
 
     // Khởi tạo Preferences
     prefs.begin("myPrefs"); // false: read/write mode
@@ -144,8 +87,12 @@ void setup()
     prefs.end();
 
     // Khởi tạo giao tiếp với UM980
+    #if PROGRAM_DEBUG
+    Serial.println("[SETUP] Khoi dong giao tiep voi UM980: TX=" + String(gnssTX) + ", RX=" + String(gnssRX));
+    #endif
+    
     Serial1.begin(GNSS_BAUD, SERIAL_8N1, (uint8_t)gnssRX, (uint8_t)gnssTX);
-    Serial1.setTimeout(20);
+    Serial1.setTimeout(30);
 
     if (needReset) {
         Serial.println("[SETUP] Cau hinh UM980 lan dau tien...");
@@ -461,6 +408,41 @@ __attribute__((noreturn)) void healthCheckTask(void* parameter) {
     }
 }
 
+__attribute__((noreturn)) void taskMQTT(void* parameter) {
+    Serial.println("[MQTT TASK] Bat dau task MQTT...");
+    while (true) {
+        // Prefer to take tcpStreamMutex when available to serialize network operations
+        if (tcpStreamMutex != nullptr) {
+            if (xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
+                if (!mqtt.connected()) {
+                    Serial.println("[MQTT TASK] MQTT mat ket noi, dang ket noi lai...");
+                    if (++mqttDisconnectCount >= CONNECTION_FAIL_LIMIT) {
+                        Serial.println("[MQTT TASK][ERROR] MQTT mat ket noi qua 5 lan, khoi dong lai ESP32...");
+                        shutdownTcpTransportBeforeRestart();
+                        ESP.restart();
+                    }
+                    connectMQTT();
+                } else {
+                    mqttDisconnectCount = 0;
+                    mqtt.loop();
+                }
+                xSemaphoreGive(tcpStreamMutex);
+            }
+        } else {
+            // no tcpStreamMutex available, just keep the loop running
+            if (mqtt.connected()) {
+                mqttDisconnectCount = 0;
+                mqtt.loop();
+            } else if (++mqttDisconnectCount >= CONNECTION_FAIL_LIMIT) {
+                Serial.println("[MQTT TASK][ERROR] MQTT mat ket noi qua 5 lan, khoi dong lai ESP32...");
+                shutdownTcpTransportBeforeRestart();
+                ESP.restart();
+            }
+        }
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+}
+
 void loop() {
     #if CONNECT_USING_4G
     if (xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
@@ -492,6 +474,21 @@ void loop() {
     // MQTT loop handled in dedicated task `taskMQTT`
     vTaskDelay(pdMS_TO_TICKS(1000)); // loop trống, tất cả logic đã được xử lý trong các task
 }
+
+#if CONNECT_USING_4G && RTCM_COMMUNICATION_PROTOCOL == TCP_IP
+static void settleModemBeforeNtrip() {
+    Serial.println("[SETUP][NTRIP] Cho modem on dinh truoc khi bat tay NTRIP...");
+    const uint32_t settleStart = millis();
+    const uint32_t settleDurationMs = 600;
+
+    while (millis() - settleStart < settleDurationMs) {
+        modem.maintain();
+        delay(20);
+    }
+
+    Serial.println("[SETUP][NTRIP] Modem da on dinh, bat dau ket noi NTRIP.");
+}
+#endif
 
 void initPrefs() {
     prefs.clear();

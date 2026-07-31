@@ -1,6 +1,19 @@
 #include "helper.h"
 
 extern String latestRtcm;
+extern TinyGsmClient ntripClient;
+
+#if RTCM_COMMUNICATION_PROTOCOL == TCP_IP
+void shutdownTcpTransportBeforeRestart() {
+    Serial.println("[SETUP] Dong cac ket noi TCP va GPRS truoc khi khoi dong lai...");
+    mqtt.disconnect();
+    ntripClient.stop();
+    if (modem.isGprsConnected()) {
+        modem.gprsDisconnect();
+    }
+    delay(500);
+}
+#endif
 
 String formDeviceHealthString(int32_t signalQualityDbm)
 {

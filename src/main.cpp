@@ -120,7 +120,7 @@ void setup()
     Serial1.setTimeout(20);
 
     if (needReset) {
-        Serial.println("[SETUP] Khoi tao Preferences lan dau tien...");
+        Serial.println("[SETUP] Cau hinh UM980 lan dau tien...");
         boostrapNTRIP();
     } else {
         Serial.println("[SETUP] Da cau hinh GNSS chip, khong can cau hinh lai.");

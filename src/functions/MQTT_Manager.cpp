@@ -71,8 +71,9 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         break;
 
       case CMD_ACTION_ESP_RESTART:
-        Serial.println("[MQTT] Ngat ket noi MQTT");
+        Serial.println("[MQTT] Ngat ket noi MQTT.");
         mqtt.disconnect();
+        Serial.println("[MQTT] Ngat ket noi NTRIP.");
         ntripClient.stop();
         Serial.println("[ESP32] Khoi dong lai ESP32...");
         ESP.restart();

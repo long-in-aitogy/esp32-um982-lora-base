@@ -28,7 +28,7 @@ extern SemaphoreHandle_t tcpStreamMutex;
 
 // ================= ĐỊNH NGHĨA HÀM =================
 
-int boostrapNTRIP() {
+int bootstrapUM980() {
   char nmeaCmdUnlog[] = "UNLOG\r\n";
   // char nmeaCmdSetBase[] = "MODE BASE -1618563.4772 5730003.6935 2278811.0631\r\n";
   char nmeaCmdSetBase[] = "MODE BASE TIME 120 2.5\r\n";

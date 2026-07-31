@@ -452,7 +452,7 @@ void initPrefs() {
     prefs.putString("GPRS_PASS", ""); // cấu hình đc, chưa lấy đc
     prefs.putInt("GNSS_TX", 27); // cấu hình được, lấy được
     prefs.putInt("GNSS_RX", 26); // cấu hình được, lấy được
-    prefs.putString("NTRIP_SERVER", "ntrip.aitogy.com"); // cấu hình được, lấy được
+    prefs.putString("NTRIP_SERVER", NTRIP_CASTER_IP); // cấu hình được, lấy được
     prefs.putUShort("NTRIP_PORT", 2101); // cấu hình được, lấy được
     prefs.putString("NTRIP_MPT", "/test"); // cấu hình được, lấy được
     prefs.putString("NT_AUTH_BS", "12345"); // cấu hình được, lấy được

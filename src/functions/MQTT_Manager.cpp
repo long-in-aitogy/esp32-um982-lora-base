@@ -18,6 +18,9 @@ PubSubClient mqtt(espClient);
 
 extern Preferences prefs;
 
+static String mqttServerHost;
+static uint16_t mqttServerPort = MQTT_PORT;
+
 // ================= ĐỊNH NGHĨA HÀM =================
 
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
@@ -79,10 +82,10 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
 int setupMQTT() {
   prefs.begin("myPrefs", false);
-  String mqttServer = prefs.getString("MQTT_SERVER", MQTT_SERVER);
-  uint16_t mqttPort = prefs.getUShort("MQTT_PORT", MQTT_PORT);
+  mqttServerHost = prefs.getString("MQTT_SERVER", String(MQTT_SERVER));
+  mqttServerPort = prefs.getUShort("MQTT_PORT", MQTT_PORT);
   prefs.end();
-  mqtt.setServer(mqttServer.c_str(), mqttPort);
+  mqtt.setServer(mqttServerHost.c_str(), mqttServerPort);
   mqtt.setCallback(mqttCallback);
   return 0;
 }
@@ -92,9 +95,9 @@ int connectMQTT() {
     Serial.println("\n[MQTT] Dang ket noi Broker...");
     String clientId = "ESP32_GW_" + String(random(0xffff), HEX);
     prefs.begin("myPrefs", false);
-    String mqttUser = prefs.getString("MQTT_USER", MQTT_USER);
-    String mqttPass = prefs.getString("MQTT_PASS", MQTT_PASS);
-    String topicSubCmd = prefs.getString("TPC_SUB_CMD", TOPIC_SUB_CMD);
+    String mqttUser = prefs.getString("MQTT_USER", String(MQTT_USER));
+    String mqttPass = prefs.getString("MQTT_PASS", String(MQTT_PASS));
+    String topicSubCmd = prefs.getString("TPC_SUB_CMD", String(TOPIC_SUB_CMD));
     prefs.end();
     if (mqtt.connect(clientId.c_str(), mqttUser.c_str(), mqttPass.c_str())) {
       Serial.println("[MQTT] Da ket noi thanh cong!");
@@ -126,7 +129,7 @@ int publishRaw(const String& payload) {
   // Take tcpStreamMutex before publishing to avoid concurrent network ops
   if (tcpStreamMutex != nullptr && xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
     prefs.begin("myPrefs", false);
-    String topicPubRaw = prefs.getString("TPC_RAW_RTCM", TOPIC_PUB_RAW_RTCM);
+    String topicPubRaw = prefs.getString("TPC_RAW_RTCM", String(TOPIC_PUB_RAW_RTCM));
     prefs.end();
     bool ok = mqtt.publish(topicPubRaw.c_str(), payload.c_str());
     xSemaphoreGive(tcpStreamMutex);
@@ -155,7 +158,7 @@ int publishHealth(const String& payload) {
 
   if (tcpStreamMutex != nullptr && xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
     prefs.begin("myPrefs", false);
-    String topicPubHealth = prefs.getString("TPC_HEALTH", TOPIC_PUB_HEALTH);
+    String topicPubHealth = prefs.getString("TPC_HEALTH", String(TOPIC_PUB_HEALTH));
     prefs.end();
     bool ok = mqtt.publish(topicPubHealth.c_str(), payload.c_str());
     xSemaphoreGive(tcpStreamMutex);

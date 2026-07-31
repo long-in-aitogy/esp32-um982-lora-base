@@ -242,18 +242,18 @@ bool isNtripConnected() {
   return isIcyOk; // Trả về true nếu đã xác thực thành công với Caster
 }
 
-int connectNTRIP() {
+int connectNTRIP() { 
+  prefs.begin("myPrefs", true);
+  String ntripAddr = prefs.getString("NTRIP_SERVER", String(NTRIP_CASTER_IP));
+  String ntripAuth = prefs.getString("NT_AUTH_BS", String(NTRIP_AUTH_BASE_STATION));
+  uint16_t ntripPort = prefs.getUShort("NTRIP_PORT", NTRIP_CASTER_PORT);
+  String ntripMountpoint = prefs.getString("NTRIP_MPT", String(NTRIP_MOUNTPOINT));
+  prefs.end();
+
   Serial.print("\n[NTRIP] Dang mo TCP den: ");
-  Serial.println(NTRIP_CASTER_IP);
+  Serial.println(ntripAddr + ":" + String(ntripPort));
 
   ntripClient.stop();
-  
-  prefs.begin("myPrefs", true);
-  String ntripAddr = prefs.getString("NTRIP_SERVER", NTRIP_CASTER_IP);
-  String ntripAuth = prefs.getString("NT_AUTH_BS", NTRIP_AUTH_BASE_STATION);
-  uint16_t ntripPort = prefs.getUShort("NTRIP_PORT", NTRIP_CASTER_PORT);
-  String ntripMountpoint = prefs.getString("NTRIP_MPT", NTRIP_MOUNTPOINT);
-  prefs.end();
 
   if (ntripClient.connect(ntripAddr.c_str(), ntripPort)) {
     delay(1000); // Đợi một chút để đảm bảo kết nối ổn định

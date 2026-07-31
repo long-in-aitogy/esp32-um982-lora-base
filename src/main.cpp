@@ -21,6 +21,11 @@ String rtcmBuffer = ""; // Bộ đệm đọc RTCM từ UM980 để gửi lên C
 unsigned long lastHealthCheck = 0;
 String latestRtcm = "";
 
+static constexpr uint8_t CONNECTION_FAIL_LIMIT = 5;
+static uint8_t mqttDisconnectCount = 0;
+static uint8_t ntripDisconnectCount = 0;
+static uint8_t gsmDisconnectCount = 0;
+
 // Semaphore
 SemaphoreHandle_t rtcmBufferMutex = nullptr;
 SemaphoreHandle_t tcpStreamMutex = nullptr;
@@ -51,6 +56,16 @@ static void settleModemBeforeNtrip() {
 
     Serial.println("[SETUP][NTRIP] Modem da on dinh, bat dau ket noi NTRIP.");
 }
+
+void shutdownTcpTransportBeforeRestart() {
+    Serial.println("[SETUP] Dong cac ket noi TCP va GPRS truoc khi khoi dong lai...");
+    mqtt.disconnect();
+    ntripClient.stop();
+    if (modem.isGprsConnected()) {
+        modem.gprsDisconnect();
+    }
+    delay(500);
+}
 #endif
 
 __attribute__((noreturn)) void taskMQTT(void* parameter) {
@@ -61,15 +76,28 @@ __attribute__((noreturn)) void taskMQTT(void* parameter) {
             if (xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
                 if (!mqtt.connected()) {
                     Serial.println("[MQTT TASK] MQTT mat ket noi, dang ket noi lai...");
+                    if (++mqttDisconnectCount >= CONNECTION_FAIL_LIMIT) {
+                        Serial.println("[MQTT TASK][ERROR] MQTT mat ket noi qua 5 lan, khoi dong lai ESP32...");
+                        shutdownTcpTransportBeforeRestart();
+                        ESP.restart();
+                    }
                     connectMQTT();
                 } else {
+                    mqttDisconnectCount = 0;
                     mqtt.loop();
                 }
                 xSemaphoreGive(tcpStreamMutex);
             }
         } else {
             // no tcpStreamMutex available, just keep the loop running
-            if (mqtt.connected()) mqtt.loop();
+            if (mqtt.connected()) {
+                mqttDisconnectCount = 0;
+                mqtt.loop();
+            } else if (++mqttDisconnectCount >= CONNECTION_FAIL_LIMIT) {
+                Serial.println("[MQTT TASK][ERROR] MQTT mat ket noi qua 5 lan, khoi dong lai ESP32...");
+                shutdownTcpTransportBeforeRestart();
+                ESP.restart();
+            }
         }
         vTaskDelay(pdMS_TO_TICKS(100));
     }
@@ -164,6 +192,7 @@ void setup()
             Serial.println("[SETUP] Ket noi mang thanh cong!");
             #if RTCM_COMMUNICATION_PROTOCOL == TCP_IP
             setupNTRIP();
+            ntripDisconnectCount = 0;
             #if CONNECT_USING_4G
             settleModemBeforeNtrip();
             #endif
@@ -271,9 +300,15 @@ __attribute__((noreturn)) void taskNtrip(void* parameter) {
             xSemaphoreGive(tcpStreamMutex);
         }
         if (!gprsConnected) {
+            if (++gsmDisconnectCount >= CONNECTION_FAIL_LIMIT) {
+                Serial.println("[GSM TASK][ERROR] GPRS mat ket noi qua 5 lan, khoi dong lai ESP32...");
+                shutdownTcpTransportBeforeRestart();
+                ESP.restart();
+            }
             vTaskDelay(pdMS_TO_TICKS(1000));
             continue;
         }
+        gsmDisconnectCount = 0;
         #endif
         rtcmRead = receiveRtcmFromGnss();
         if (xSemaphoreTake(rtcmBufferMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS)))
@@ -287,6 +322,15 @@ __attribute__((noreturn)) void taskNtrip(void* parameter) {
                 connectNTRIP();
             }
             loopStatus = loopNTRIP(rtcmRead);
+            if (loopStatus == 500 || loopStatus == 504 || !isNtripConnected()) {
+                if (++ntripDisconnectCount >= CONNECTION_FAIL_LIMIT) {
+                    Serial.println("[NTRIP TASK][ERROR] NTRIP mat ket noi qua 5 lan, khoi dong lai ESP32...");
+                    shutdownTcpTransportBeforeRestart();
+                    ESP.restart();
+                }
+            } else {
+                ntripDisconnectCount = 0;
+            }
             xSemaphoreGive(tcpStreamMutex);
             #if PROGRAM_DEBUG
             Serial.println("[NTRIP TASK] loopNTRIP() tra ve: " + String(loopStatus));
@@ -424,7 +468,14 @@ void loop() {
             digitalWrite(LED_PIN, HIGH);
             Serial.println("[LOOP] GPRS mat ket noi, dang thu ket noi lai...");
             ntripClient.stop(0);
+            if (++gsmDisconnectCount >= CONNECTION_FAIL_LIMIT) {
+                Serial.println("[LOOP][ERROR] GPRS mat ket noi qua 5 lan, khoi dong lai ESP32...");
+                shutdownTcpTransportBeforeRestart();
+                ESP.restart();
+            }
             connectGSM();
+        } else {
+            gsmDisconnectCount = 0;
             digitalWrite(LED_PIN, LOW);
         }
         xSemaphoreGive(tcpStreamMutex);

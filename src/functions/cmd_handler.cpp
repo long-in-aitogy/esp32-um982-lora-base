@@ -164,7 +164,7 @@ cmd_action_t handleCommand(std::vector<String> &cmdWords) {
         if (cmdWords[2] == "SET" && cmdWords[3] == "CSTRAUTH") {
             prefs.begin("myPrefs", false);
             String auth = cmdWords[4];
-            prefs.putString("NTRIP_AUTH", auth);
+            prefs.putString("NT_AUTH_BS", auth);
             prefs.end();
             return CMD_ACTION_NONE;
         }

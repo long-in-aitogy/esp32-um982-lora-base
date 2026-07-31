@@ -60,22 +60,27 @@ bool connectGSM() {
     uint8_t retries = 0;
     while (retries <= 5) {
         retries++;
+        prefs.begin("myPrefs", true);
+        String apn = prefs.getString("APN", String(APN));
+        String gprsUser = prefs.getString("GPRS_USER", String(GPRS_USER));
+        String gprsPass = prefs.getString("GPRS_PASS", String(GPRS_PASS));
+        prefs.end();
+
         SerialMon.println("[GSM] Dang ket noi mang GSM...");
         if (modem.isNetworkConnected()) {
             SerialMon.println("[GSM] Mang GSM da ket noi.");
-            if (modem.gprsConnect(APN, GPRS_USER, GPRS_PASS) && modem.isGprsConnected()) {
+            if (modem.gprsConnect(apn.c_str(), gprsUser.c_str(), gprsPass.c_str()) && modem.isGprsConnected()) {
                 SerialMon.println("[GSM] GPRS da ket noi.");
                 return true;
             } else {
                 SerialMon.println("[GSM] GPRS chua ket noi.");
             }
-            return false;
         }
         SerialMon.println("[GSM] Chua ket noi duoc mang GSM ngay lap tuc. Dang doi...");
         if (modem.waitForNetwork(30000)) {
             delay(1000);
             SerialMon.println("[GSM] Mang GSM da ket noi.");
-            if (modem.gprsConnect(APN, GPRS_USER, GPRS_PASS) && modem.isGprsConnected()) {
+            if (modem.gprsConnect(apn.c_str(), gprsUser.c_str(), gprsPass.c_str()) && modem.isGprsConnected()) {
                 SerialMon.println("[GSM] GPRS da ket noi.");
                 return true;
             } else {

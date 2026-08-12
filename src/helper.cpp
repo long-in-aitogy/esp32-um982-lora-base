@@ -1,17 +1,26 @@
 #include "helper.h"
 
 extern String latestRtcm;
+#if CONNECT_USING_4G
 extern TinyGsmClient ntripClient;
+#elif CONNECT_USING_WIFI
+extern WiFiClient ntripClient;
+#endif
 
 #if RTCM_COMMUNICATION_PROTOCOL == TCP_IP
 void shutdownTcpTransportBeforeRestart() {
     Serial.println("[SETUP] Dong cac ket noi TCP va GPRS truoc khi khoi dong lai...");
     mqtt.disconnect();
     ntripClient.stop();
+    #if CONNECT_USING_4G
     if (modem.isGprsConnected()) {
         modem.gprsDisconnect();
     }
+    #endif
+    #if CONNECT_USING_WIFI
+    WiFi.disconnect();
     delay(500);
+    #endif
 }
 #endif
 

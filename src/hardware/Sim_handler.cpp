@@ -60,8 +60,20 @@ bool connectGSM() {
     uint8_t retries = 0;
     while (retries <= 5) {
         retries++;
+        String simOperator = modem.getProvider();
+        SerialMon.println("[GSM] Nha mang GSM: " + simOperator);
+        String apn = "";
+        if (simOperator.indexOf("VIETTEL") >= 0) {
+            apn = "v-internet";
+        } else if (simOperator.indexOf("MOBIFONE") >= 0) {
+            apn = "m-wap";
+        } else if (simOperator.indexOf("VINAPHONE") >= 0) {
+            apn = "m3-world";
+        } else {
+            SerialMon.println("[GSM] Nha mang khong xac dinh, su dung APN mac dinh: " + String(APN));
+            apn = String(APN);
+        }
         prefs.begin("myPrefs", true);
-        String apn = prefs.getString("APN", String(APN));
         String gprsUser = prefs.getString("GPRS_USER", String(GPRS_USER));
         String gprsPass = prefs.getString("GPRS_PASS", String(GPRS_PASS));
         prefs.end();

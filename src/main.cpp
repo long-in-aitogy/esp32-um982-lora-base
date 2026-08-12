@@ -72,6 +72,8 @@ void setup()
     // Khởi tạo Preferences
     prefs.begin("myPrefs"); // false: read/write mode
     bool needReset = prefs.getBool("NEED_RESET", true);
+    int restartCount = prefs.getInt("RSTRT_COUNT", 0);
+    prefs.putInt("RSTRT_COUNT", restartCount + 1);
     if (needReset) {
         Serial.println("[SETUP] Khoi tao Preferences lan dau tien...");
         initPrefs();
@@ -82,8 +84,10 @@ void setup()
 
     gnssTX = prefs.getInt("GNSS_TX", TX_GNSS);
     gnssRX = prefs.getInt("GNSS_RX", RX_GNSS);
+    #if CONNECT_USING_4G
     rx2ModemTX = prefs.getInt("RX_TO_MODEM_TX", RX_TO_MODEM_TX);
     tx2ModemRX = prefs.getInt("TX_TO_MODEM_RX", TX_TO_MODEM_RX);
+    #endif
     prefs.end();
 
     // Khởi tạo giao tiếp với UM980
@@ -92,7 +96,7 @@ void setup()
     #endif
     
     Serial1.begin(GNSS_BAUD, SERIAL_8N1, (uint8_t)gnssRX, (uint8_t)gnssTX);
-    Serial1.setTimeout(30);
+    Serial1.setTimeout(100);
 
     if (needReset) {
         Serial.println("[SETUP] Cau hinh UM980 lan dau tien...");
@@ -240,6 +244,13 @@ __attribute__((noreturn)) void taskNtrip(void* parameter) {
     int loopStatus = 0;
     String rtcmRead = "";
     while (true) {
+        rtcmRead = receiveRtcmFromGnss();
+        if (xSemaphoreTake(rtcmBufferMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS)))
+        {
+            latestRtcm = rtcmRead;
+            xSemaphoreGive(rtcmBufferMutex);
+        }
+
         #if CONNECT_USING_4G
         bool gprsConnected = false;
         if (xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
@@ -257,18 +268,13 @@ __attribute__((noreturn)) void taskNtrip(void* parameter) {
         }
         gsmDisconnectCount = 0;
         #endif
-        rtcmRead = receiveRtcmFromGnss();
-        if (xSemaphoreTake(rtcmBufferMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS)))
-        {
-            latestRtcm = rtcmRead;
-            xSemaphoreGive(rtcmBufferMutex);
-        }
         if (xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
             if (loopStatus == 504) {
                 Serial.println("[NTRIP TASK] Dang thu ket noi lai NTRIP...");
                 connectNTRIP();
             }
             loopStatus = loopNTRIP(rtcmRead);
+            xSemaphoreGive(tcpStreamMutex);
             if (loopStatus == 500 || loopStatus == 504 || !isNtripConnected()) {
                 if (++ntripDisconnectCount >= CONNECTION_FAIL_LIMIT) {
                     Serial.println("[NTRIP TASK][ERROR] NTRIP mat ket noi qua 5 lan, khoi dong lai ESP32...");
@@ -278,7 +284,6 @@ __attribute__((noreturn)) void taskNtrip(void* parameter) {
             } else {
                 ntripDisconnectCount = 0;
             }
-            xSemaphoreGive(tcpStreamMutex);
             #if PROGRAM_DEBUG
             Serial.println("[NTRIP TASK] loopNTRIP() tra ve: " + String(loopStatus));
             #endif
@@ -493,6 +498,7 @@ static void settleModemBeforeNtrip() {
 void initPrefs() {
     prefs.clear();
     prefs.putBool("NEED_RESET", false);
+    prefs.putInt("RSTRT_COUNT", 0); // chưa cấu hình được, lấy được
     prefs.putUChar("TX_TO_MODEM_RX", 17); // chưa cấu hình được, lấy được
     prefs.putUChar("RX_TO_MODEM_TX", 16); // chưa cấu hình được, lấy được
     prefs.putUChar("MODEM_DC_PIN", 15); // chưa cấu hình đc, chưa lấy đc
@@ -500,8 +506,8 @@ void initPrefs() {
     prefs.putString("APN", "v-internet"); // cấu hình đc, chưa lấy đc
     prefs.putString("GPRS_USER", ""); // cấu hình đc, chưa lấy đc
     prefs.putString("GPRS_PASS", ""); // cấu hình đc, chưa lấy đc
-    prefs.putInt("GNSS_TX", 27); // cấu hình được, lấy được
-    prefs.putInt("GNSS_RX", 26); // cấu hình được, lấy được
+    prefs.putInt("GNSS_RX", RX_GNSS); // cấu hình được, lấy được
+    prefs.putInt("GNSS_TX", TX_GNSS); // cấu hình được, lấy được
     prefs.putString("NTRIP_SERVER", NTRIP_CASTER_IP); // cấu hình được, lấy được
     prefs.putUShort("NTRIP_PORT", 2101); // cấu hình được, lấy được
     prefs.putString("NTRIP_MPT", "/test"); // cấu hình được, lấy được

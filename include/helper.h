@@ -34,5 +34,6 @@ extern bool mqttHealthMode;
 
 // ================= ĐỊNH NGHĨA CÁC HÀM =================
 String formDeviceHealthString(int32_t signalQualityDbm);
+void shutdownTcpTransportBeforeRestart();
 
 #endif

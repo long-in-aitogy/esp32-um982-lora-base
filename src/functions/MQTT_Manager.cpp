@@ -3,6 +3,7 @@
 #include "Prog_Config.h"
 #include "functions/cmd_handler.h"
 #include <Preferences.h>
+#include "helper.h"
 
 // ================= ĐỊNH NGHĨA CÁC ĐỐI TƯỢNG CẦN CHO KẾT NỐI =================
 #if CONNECT_USING_WIFI
@@ -71,12 +72,8 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         break;
 
       case CMD_ACTION_ESP_RESTART:
-        Serial.println("[MQTT] Ngat ket noi MQTT.");
-        mqtt.disconnect();
-        Serial.println("[MQTT] Ngat ket noi NTRIP.");
-        ntripClient.stop();
-        Serial.println("[ESP32] Khoi dong lai ESP32...");
-        ESP.restart();
+        Serial.println("[MQTT DOWNLINK] Gui lenh yeu cau khoi dong lai ESP32");
+        shutdownTcpTransportBeforeRestart();
         break;
 
       default:

@@ -32,14 +32,14 @@ int bootstrapUM980() {
   char nmeaCmdUnlog[] = "UNLOG\r\n";
   // char nmeaCmdSetBase[] = "MODE BASE -1618563.4772 5730003.6935 2278811.0631\r\n";
   char nmeaCmdSetBase[] = "MODE BASE TIME 120 2.5\r\n";
-  char rtcm1084SetOutputCom2[] = "RTCM1084 COM1 1\r\n";
-  char rtcm1074SetOutputCom2[] = "RTCM1074 COM1 1\r\n";
-  char rtcm1006SetOutputCom2[] = "RTCM1006 COM1 1\r\n";
-  char rtcm1124SetOutputCom2[] = "RTCM1124 COM1 1\r\n";
-  char rtcm1087SetOutputCom2[] = "RTCM1087 COM1 1\r\n";
-  char rtcm1077SetOutputCom2[] = "RTCM1077 COM1 1\r\n";
-  char rtcm1127SetOutputCom2[] = "RTCM1127 COM1 1\r\n";
-  char rtcmSetBaudCom2[] = "CONFIG COM1 115200\r\n";
+  char rtcm1084SetOutputCom2[] = "RTCM1084 COM2 1\r\n";
+  char rtcm1074SetOutputCom2[] = "RTCM1074 COM2 1\r\n";
+  char rtcm1006SetOutputCom2[] = "RTCM1006 COM2 1\r\n";
+  char rtcm1124SetOutputCom2[] = "RTCM1124 COM2 1\r\n";
+  char rtcm1087SetOutputCom2[] = "RTCM1087 COM2 1\r\n";
+  char rtcm1077SetOutputCom2[] = "RTCM1077 COM2 1\r\n";
+  char rtcm1127SetOutputCom2[] = "RTCM1127 COM2 1\r\n";
+  char rtcmSetBaudCom2[] = "CONFIG COM2 115200\r\n";
 
   char cmdSaveConfig[] = "saveconfig\r\n";
 
@@ -322,10 +322,9 @@ int loopNTRIP(String& rtcmData) {
 
   // 3. Đẩy RTCM lên Caster nếu có dữ liệu
   if (!rtcmData.isEmpty()) {
-    ntripClient.print(rtcmData); // Gửi dữ liệu RTCM lên Caster
-    #if PROGRAM_DEBUG
+    uint8_t* rtcmBytes = (uint8_t*)rtcmData.c_str();
+    ntripClient.write(rtcmBytes, rtcmData.length() + 1); // Gửi dữ liệu RTCM lên Caster
     Serial.println("[NTRIP TASK] Da gui du lieu RTCM len Caster!");
-    #endif
     returnCode += 4;
   }
   #if PROGRAM_DEBUG

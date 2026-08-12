@@ -427,6 +427,21 @@ namespace UbxCmdBuilder
         return commands;
     }
 
+    Command commandListToBytes(const CommandList &commands)
+    {
+        size_t totalSize = 0;
+        for (const Command &command : commands)
+            totalSize += command.size();
+
+        Command bytes;
+        bytes.reserve(totalSize);
+        for (const Command &command : commands)
+            bytes.insert(bytes.end(), command.begin(), command.end());
+
+        return bytes;
+    }
+
+    #if PROGRAM_DEBUG
     String debugCommand(const Command &command)
     {
         String result;
@@ -440,5 +455,6 @@ namespace UbxCmdBuilder
         }
         return result;
     }
+    #endif
 
 } // namespace UbxCmdBuilder

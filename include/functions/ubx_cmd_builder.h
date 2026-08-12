@@ -45,7 +45,11 @@ namespace UbxCmdBuilder
                                          const GnssOptions &options = {});
     CommandList buildGeotekLteUnicoreConfig(const String &setupMethod, uint32_t duration = 60,
                                             double lat = 0, double lon = 0, double alt = 0);
+    Command commandListToBytes(const CommandList &commands);
+
+    #if PROGRAM_DEBUG
     String debugCommand(const Command &command);
+    #endif
 
 } // namespace UbxCmdBuilder
 

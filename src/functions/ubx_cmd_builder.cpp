@@ -7,7 +7,7 @@
 namespace UbxCmdBuilder
 {
 
-    constexpr uint8_t UBLOX_SAVE_CONFIG[] = {
+    constexpr std::array<uint8_t, 21> UBLOX_SAVE_CONFIG = {
         0xB5, 0x62, 0x06, 0x09, 0x0D, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF,
         0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x1D, 0xAB};
 
@@ -209,38 +209,56 @@ namespace UbxCmdBuilder
             {o.bds, BDS.data(), BDS.size()},
         }};
 
+        const auto appendNmeaGroup = [&](const Messages &group) {
+            if (!group.enabled)
+                return;
+
+            for (size_t i = 0; i < group.count; ++i)
+            {
+                commands.push_back(asciiCommand(String(group.items[i]) + " " + port + " 1\r\n"));
+                commands.push_back(delayCommand(200));
+            }
+        };
+
         if (o.outputMode != OutputMode::RtcmOnly)
             for (const auto &group : nmea)
-                if (group.enabled)
-                    for (size_t i = 0; i < group.count; ++i)
-                    {
-                        commands.push_back(asciiCommand(String(group.items[i]) + " " + port + " 1\r\n"));
-                        commands.push_back(delayCommand(200));
-                    }
+                appendNmeaGroup(group);
+                    
         std::vector<String> rtcm = {"1006", "1033"};
-        auto add = [&](bool enabled, const char *const *messages, size_t count)
+        auto add = [&](bool enabled, const std::array<const char *, 3> &messages)
         {
             if (!enabled)
                 return;
-            for (size_t i = 0; i < count; ++i)
+            for (const char *item : messages)
             {
-                const String message(messages[i]);
+                const String message(item);
                 const bool ephemeris = message == "1019" || message == "1020" || message == "1042" || message == "1044" || message == "1045";
                 const bool matches = (o.msmLevel == MsmLevel::Both && (message.endsWith("4") || message.endsWith("7"))) || message.endsWith(String(static_cast<uint8_t>(o.msmLevel)));
                 if (ephemeris || matches)
                     rtcm.push_back(message);
             }
         };
-        static constexpr const char *GPS_R[] = {"1074", "1077", "1019"};
-        static constexpr const char *GLO_R[] = {"1084", "1087", "1020"};
-        static constexpr const char *GAL_R[] = {"1094", "1097", "1045"};
-        static constexpr const char *BDS_R[] = {"1124", "1127", "1042"};
-        static constexpr const char *QZSS_R[] = {"1114", "1117", "1044"};
-        add(o.gps, GPS_R, 3);
-        add(o.glo, GLO_R, 3);
-        add(o.gal, GAL_R, 3);
-        add(o.bds, BDS_R, 3);
-        add(o.qzss, QZSS_R, 3);
+        static constexpr std::array<const char *, 3> GPS_R = {
+            {"1074", "1077", "1019"}
+        };
+        static constexpr std::array<const char *, 3> GLO_R = {
+            {"1084", "1087", "1020"}
+        };
+        static constexpr std::array<const char *, 3> GAL_R = {
+            {"1094", "1097", "1045"}
+        };
+        static constexpr std::array<const char *, 3> BDS_R = {
+            {"1124", "1127", "1042"}
+        };
+        static constexpr std::array<const char *, 3> QZSS_R = {
+            {"1114", "1117", "1044"}
+        };
+
+        add(o.gps, GPS_R);
+        add(o.glo, GLO_R);
+        add(o.gal, GAL_R);
+        add(o.bds, BDS_R);
+        add(o.qzss, QZSS_R);
         for (size_t i = 0; i < rtcm.size(); ++i)
             if (std::find(rtcm.begin(), rtcm.begin() + i, rtcm[i]) == rtcm.begin() + i)
             {
@@ -251,7 +269,8 @@ namespace UbxCmdBuilder
     Command buildTmode3Message() { return Command({0xB5, 0x62, 0x06, 0x71, 0x28, 0x00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}); }
     void finishTmode3Checksum(Command &message)
     {
-        uint8_t a = 0, b = 0;
+        uint8_t a = 0;
+        uint8_t b = 0;
         for (size_t i = 2; i < 46; ++i)
         {
             a += message[i];
@@ -284,7 +303,11 @@ namespace UbxCmdBuilder
         const GnssOptions o = normalizeGnssOptions(options);
         const bool diagnostics = o.outputMode != OutputMode::RtcmOnly;
         std::vector<std::pair<uint32_t, bool>> entries;
-        const PortKeys protocols[] = {{0x10740001, 0x10760001, 0x10780001}, {0x10740002, 0x10760002, 0x10780002}, {0x10740004, 0x10760004, 0x10780004}};
+        constexpr std::array<PortKeys, 3> protocols = {{
+            {0x10740001, 0x10760001, 0x10780001},
+            {0x10740002, 0x10760002, 0x10780002},
+            {0x10740004, 0x10760004, 0x10780004},
+        }};
         for (const String &port : o.ports)
         {
             entries.emplace_back(keyForPort(protocols[0], port), true);
@@ -304,11 +327,15 @@ namespace UbxCmdBuilder
         struct MsmId
         {
             bool constellation;
-            uint8_t msm4, msm7;
+            uint8_t msm4;
+            uint8_t msm7;
         };
-        const MsmId ids[] = {{o.gps, 0x4A, 0x4D}, {o.glo, 0x54, 0x57}, {o.gal, 0x5E, 0x61}, {o.bds, 0x7C, 0x7F}};
+        const std::array<MsmId, 4> ids = {{
+            {o.gps, 0x4A, 0x4D}, {o.glo, 0x54, 0x57},
+            {o.gal, 0x5E, 0x61}, {o.bds, 0x7C, 0x7F},
+        }};
         for (const auto &id : ids)
-            for (uint8_t level : {4, 7})
+            for (uint8_t level : {(uint8_t)4, (uint8_t)7})
             {
                 const bool enabled = id.constellation && (o.msmLevel == MsmLevel::Both || static_cast<uint8_t>(o.msmLevel) == level);
                 Command packet = ubxCfgMsg(0xF5, level == 4 ? id.msm4 : id.msm7, enabled ? o.ports : std::vector<String>{}, enabled ? 1 : 0);
@@ -354,15 +381,16 @@ namespace UbxCmdBuilder
             Command message = buildTmode3Message();
             message[8] = 2;
             message[9] = 1;
-            const double values[] = {lat * 10000000.0, lon * 10000000.0, alt * 100.0};
-            const size_t offsets[] = {10, 14, 18};
+            const std::array<double, 3> values = {lat * 10000000.0, lon * 10000000.0, alt * 100.0};
+            constexpr std::array<size_t, 3> offsets = {10, 14, 18};
             for (uint8_t i = 0; i < 3; ++i)
             {
-                const int32_t whole = static_cast<int32_t>(values[i]);
+                const auto whole = static_cast<int32_t>(values[i]);
                 writeU32(message, offsets[i], static_cast<uint32_t>(whole));
                 message[22 + i] = static_cast<uint8_t>(static_cast<int8_t>((values[i] - whole) * 100));
             }
-            writeU32(message, 26, static_cast<uint32_t>(accuracy * 10000));
+            const auto accuracyValue = static_cast<uint32_t>(accuracy * 10000);
+            writeU32(message, 26, accuracyValue);
             finishTmode3Checksum(message);
             commands.push_back(message);
             commands.push_back(buildUbloxOutputConfigCommand(options));
@@ -389,7 +417,10 @@ namespace UbxCmdBuilder
         String method = setupMethod;
         method.toUpperCase();
         commands.push_back(method == "SURVEY_IN" ? asciiCommand("mode base time " + String(duration) + "\r\n") : asciiCommand("mode base " + String(lat, 10) + " " + String(lon, 10) + " " + String(alt, 4) + "\r\n"));
-        static constexpr const char *RTCM[] = {"1006", "1033", "1074", "1124", "1084", "1094", "1114", "1077", "1127", "1087", "1097", "1117", "1042", "1019", "1020", "1045", "1044"};
+        static constexpr std::array<const char *, 17> RTCM = {
+            "1006", "1033", "1074", "1124", "1084", "1094", "1114", "1077", "1127",
+            "1087", "1097", "1117", "1042", "1019", "1020", "1045", "1044",
+        };
         for (const char *message : RTCM)
             commands.push_back(asciiCommand("rtcm" + String(message) + " com2 1\r\n"));
         commands.push_back(asciiCommand("saveconfig\r\n"));
@@ -410,4 +441,4 @@ namespace UbxCmdBuilder
         return result;
     }
 
-} // namespace CommandBuilder
+} // namespace UbxCmdBuilder

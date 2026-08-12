@@ -5,36 +5,47 @@
 #include <cstdint>
 #include <vector>
 
-namespace UbxCmdBuilder {
+namespace UbxCmdBuilder
+{
 
-using Command = std::vector<uint8_t>;
-using CommandList = std::vector<Command>;
+    using Command = std::vector<uint8_t>;
+    using CommandList = std::vector<Command>;
 
-enum class OutputMode { DiagnosticsRtcm, RtcmOnly };
-enum class MsmLevel : uint8_t { Msm4 = 4, Msm7 = 7, Both = 0 };
+    enum class OutputMode
+    {
+        DiagnosticsRtcm,
+        RtcmOnly
+    };
+    enum class MsmLevel : uint8_t
+    {
+        Msm4 = 4,
+        Msm7 = 7,
+        Both = 0
+    };
 
-struct GnssOptions {
-    bool gps = true;
-    bool glo = true;
-    bool gal = true;
-    bool bds = true;
-    bool qzss = false;
-    bool sbas = false;
-    OutputMode outputMode = OutputMode::DiagnosticsRtcm;
-    MsmLevel msmLevel = MsmLevel::Msm4;
-    std::vector<String> ports = {"USB"};
-};
+    struct GnssOptions
+    {
+        bool gps = true;
+        bool glo = true;
+        bool gal = true;
+        bool bds = true;
+        bool qzss = false;
+        bool sbas = false;
+        OutputMode outputMode = OutputMode::DiagnosticsRtcm;
+        MsmLevel msmLevel = MsmLevel::Msm4;
+        std::vector<String> ports = {"USB"};
+    };
 
-GnssOptions normalizeGnssOptions(GnssOptions options = {});
-Command buildUbloxOutputConfigCommand(const GnssOptions &options = {});
-CommandList buildBaseSurveyInCommand(const String &sensorType, uint32_t duration,
-                                     float accuracy, const GnssOptions &options = {});
-CommandList buildBaseFixedLlaCommand(const String &sensorType, double lat, double lon,
-                                     double alt, float accuracy,
-                                     const GnssOptions &options = {});
-CommandList buildGeotekLteUnicoreConfig(const String &setupMethod, uint32_t duration = 60,
-                                        double lat = 0, double lon = 0, double alt = 0);
-String debugCommand(const Command &command);
+    GnssOptions normalizeGnssOptions(GnssOptions options = {});
+    Command buildUbloxOutputConfigCommand(const GnssOptions &options = {});
+    CommandList buildBaseSurveyInCommand(const String &sensorType, uint32_t duration,
+                                         float accuracy, const GnssOptions &options = {});
+    CommandList buildBaseFixedLlaCommand(const String &sensorType, double lat, double lon,
+                                         double alt, float accuracy,
+                                         const GnssOptions &options = {});
+    CommandList buildGeotekLteUnicoreConfig(const String &setupMethod, uint32_t duration = 60,
+                                            double lat = 0, double lon = 0, double alt = 0);
+    String debugCommand(const Command &command);
 
 } // namespace UbxCmdBuilder
 

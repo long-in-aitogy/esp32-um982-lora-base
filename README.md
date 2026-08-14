@@ -98,3 +98,14 @@ Các cấu hình sau được khai báo dưới dạng hằng số inline trong 
 - Cấu hình kết nối MQTT (`Server`, `Port`, `User`, `Pass`, `Topics`)
 - Cấu hình tài khoản NTRIP (`NTRIP_MODE`, `NTRIP_CASTER_IP`, `NTRIP_CASTER_PORT`, `NTRIP_MOUNTPOINT`, `NTRIP_AUTH`(base64))
 - Cấu hình kiểm tra sức khoẻ định kỳ (`HEALTH_INTERVAL`)
+
+## Gửi lệnh qua MQTT:
+
+Một lệnh sẽ bắt đầu với từ khóa ATG. Mỗi từ cách nhau một khoảng cách. Từ thứ hai của lệnh thể hiện thành phần sẽ được tác động:
+
+- `GNSS`: Lệnh liên quan đến module GNSS.
+- `NTRIP`: Lệnh liên quan đến kết nối NTRIP.
+- `MQTT`: Lệnh liên quan đến kết nối MQTT.
+- `ESP`: Lệnh liên quan trực tiếp tới module ESP32.
+
+### GNSS:

@@ -88,7 +88,7 @@ Các cấu hình sau có thể được sửa trong file `Top_Lvl_Config.h` ho�
 - `CONNECT_USING_4G`: Kết nối mạng bằng 4G (0 = tắt, 1 = bật). Nếu cấu hình này và `CONNECT_USING_WIFI` đều được bật, báo lỗi. Nếu cùng tắt, chọn WiFi.
 - `RTCM_COMMUNICATION_PROTOCOL`: Chồng giao thức truyền dữ liệu cải chính NTRIP (0 = qua TCP/IP stack, 1 = qua LoRa).
 
-### Cấu hình hoạt động:
+### Cấu hình hoạt động MẶC ĐỊNH:
 Các cấu hình sau được khai báo dưới dạng hằng số inline trong `include/Prog_Config.h` và có thể được sửa trực tiếp trong file này:
 
 - Thiết lập chân UART kết nối với module GNSS (`RX_GNSS`, `TX_GNSS`)
@@ -98,3 +98,72 @@ Các cấu hình sau được khai báo dưới dạng hằng số inline trong 
 - Cấu hình kết nối MQTT (`Server`, `Port`, `User`, `Pass`, `Topics`)
 - Cấu hình tài khoản NTRIP (`NTRIP_MODE`, `NTRIP_CASTER_IP`, `NTRIP_CASTER_PORT`, `NTRIP_MOUNTPOINT`, `NTRIP_AUTH`(base64))
 - Cấu hình kiểm tra sức khoẻ định kỳ (`HEALTH_INTERVAL`)
+
+Ở trên là các cấu hình mặc định, nếu không thể đọc cấu hình từ bộ nhớ flash được triển khai bằng Preferences (NVS), chương trình sẽ sử dụng các giá trị mặc định này. Các cấu hình này có thể được thay đổi bằng cách gửi lệnh qua MQTT (xem phần dưới).
+
+## Gửi lệnh qua MQTT:
+
+Thiết bị nhận nội dung (payload) từ topic lệnh MQTT đã cấu hình. Mỗi lệnh phải bắt đầu bằng `ATG`; các thành phần được ngăn cách bằng khoảng trắng. Từ khóa phân biệt chữ hoa/chữ thường. Giá trị không được chứa khoảng trắng (ví dụ mật khẩu có khoảng trắng hiện chưa được hỗ trợ).
+
+### Cấu trúc chung
+
+```text
+ATG <NHÓM_LỆNH> <THAO_TÁC> [THAM_SỐ...]
+```
+
+Trong đó:
+
+- `ATG`: tiền tố bắt buộc để firmware nhận diện lệnh.
+- `NHÓM_LỆNH`: thành phần cần tác động: `GNSS`, `ESP`, `MQTT`, `NTRIP` hoặc `CONFIG`.
+- `THAO_TÁC` và `THAM_SỐ`: phụ thuộc vào từng nhóm lệnh bên dưới.
+
+Các lệnh `SET` lưu giá trị vào bộ nhớ Preferences (NVS) của ESP32. Khi thay đổi thông số kết nối đang hoạt động, nên khởi động lại thiết bị để các kết nối được tạo lại với cấu hình mới.
+
+### GNSS
+
+Các lệnh này cấu hình module GNSS ở chế độ base và được gửi qua UART đến module.
+
+| Cú pháp | Giải thích |
+| --- | --- |
+| `ATG GNSS BASE SURVEY_IN <thời_gian> <độ_chính_xác>` | Bật chế độ khảo sát vị trí base. `<thời_gian>` là thời gian khảo sát tối thiểu, tính bằng giây; `<độ_chính_xác>` là ngưỡng độ chính xác, tính bằng mét. Ví dụ: `ATG GNSS BASE SURVEY_IN 300 1.0`. |
+| `ATG GNSS BASE FIXED <vĩ_độ> <kinh_độ> <độ_cao> <độ_chính_xác>` | Cấu hình vị trí base cố định theo LLA. Vĩ độ và kinh độ ở đơn vị độ thập phân, độ cao và độ chính xác ở mét. Ví dụ: `ATG GNSS BASE FIXED 10.7769 106.7009 12.5 0.5`. |
+
+### ESP
+
+| Cú pháp | Giải thích |
+| --- | --- |
+| `ATG ESP AT+RST` | Khởi động lại ESP32 ngay lập tức. |
+| `ATG ESP SET GNSS TX <GPIO>` | Lưu chân GPIO truyền UART từ ESP32 đến GNSS. Ví dụ: `ATG ESP SET GNSS TX 17`. |
+| `ATG ESP SET GNSS RX <GPIO>` | Lưu chân GPIO nhận UART từ GNSS về ESP32. Ví dụ: `ATG ESP SET GNSS RX 16`. |
+| `ATG ESP SET 4G APN <apn>` | Lưu APN của nhà mạng 4G. Ví dụ: `ATG ESP SET 4G APN v-internet`. |
+| `ATG ESP SET 4G USER <tên_người_dùng>` | Lưu tên người dùng APN 4G. Ví dụ: `ATG ESP SET 4G USER user`. |
+| `ATG ESP SET 4G PASS <mật_khẩu>` | Lưu mật khẩu APN 4G. Ví dụ: `ATG ESP SET 4G PASS password`. |
+
+### MQTT
+
+| Cú pháp | Giải thích |
+| --- | --- |
+| `ATG MQTT SET SERVER <địa_chỉ>` | Lưu tên miền hoặc địa chỉ IP của MQTT broker. Ví dụ: `ATG MQTT SET SERVER broker.example.com`. |
+| `ATG MQTT SET PORT <cổng>` | Lưu cổng MQTT (số nguyên 0–65535). Ví dụ: `ATG MQTT SET PORT 1883`. |
+| `ATG MQTT SET USER <tên_người_dùng>` | Lưu tên người dùng đăng nhập MQTT. |
+| `ATG MQTT SET PASS <mật_khẩu>` | Lưu mật khẩu đăng nhập MQTT. |
+| `ATG MQTT SET PUBTPCHEALTH <topic>` | Lưu topic publish dữ liệu health check. Ví dụ: `ATG MQTT SET PUBTPCHEALTH tdm2402/node-01/health`. |
+| `ATG MQTT SET PUBTPCRAW <topic>` | Lưu topic publish dữ liệu RTCM thô. Ví dụ: `ATG MQTT SET PUBTPCRAW tdm2402/node-01/raw/rtcm`. |
+| `ATG MQTT SET SUBTPCCMD <topic>` | Lưu topic subscribe để nhận lệnh MQTT. Ví dụ: `ATG MQTT SET SUBTPCCMD tdm2402/node-01/cmd`. |
+
+### NTRIP
+
+| Cú pháp | Giải thích |
+| --- | --- |
+| `ATG NTRIP SET CSTRADDR <địa_chỉ>` | Lưu tên miền hoặc địa chỉ IP của NTRIP caster. |
+| `ATG NTRIP SET CSTRPORT <cổng>` | Lưu cổng của NTRIP caster (số nguyên 0–65535), thường là `2101`. |
+| `ATG NTRIP SET MNTPNT <mountpoint>` | Lưu mountpoint cần kết nối. Ví dụ: `ATG NTRIP SET MNTPNT VRS_RTCM32`. |
+| `ATG NTRIP SET CSTRAUTH <chuỗi_xác_thực>` | Lưu chuỗi xác thực NTRIP theo định dạng base64. Giá trị này thường là base64 của `username:password`. |
+
+### Cấu hình hệ thống
+
+| Cú pháp | Giải thích |
+| --- | --- |
+| `ATG CONFIG RESET` | Đánh dấu khôi phục cấu hình mặc định, sau đó khởi động lại ESP32. Lần khởi động kế tiếp sẽ xóa toàn bộ cấu hình đã lưu trong Preferences và nạp lại giá trị mặc định. |
+
+> Lưu ý: Firmware hiện không phản hồi trạng thái lệnh qua MQTT. Theo dõi Serial Monitor để kiểm tra log xử lý lệnh; riêng lệnh GNSS sẽ báo lỗi khi thiếu hoặc thừa tham số.

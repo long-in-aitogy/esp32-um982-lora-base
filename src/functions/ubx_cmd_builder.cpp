@@ -417,7 +417,7 @@ namespace UbxCmdBuilder
             Serial.println("Configuring Unicore output messages on COM3");
             appendUnicoreOutputCommands(commands, "com3", options);
             commands.push_back(asciiCommand("saveconfig\r\n"));
-        }
+        // }
         #endif
         return commands;
     }

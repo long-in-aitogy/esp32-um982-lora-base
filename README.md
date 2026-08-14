@@ -88,7 +88,7 @@ Các cấu hình sau có thể được sửa trong file `Top_Lvl_Config.h` ho�
 - `CONNECT_USING_4G`: Kết nối mạng bằng 4G (0 = tắt, 1 = bật). Nếu cấu hình này và `CONNECT_USING_WIFI` đều được bật, báo lỗi. Nếu cùng tắt, chọn WiFi.
 - `RTCM_COMMUNICATION_PROTOCOL`: Chồng giao thức truyền dữ liệu cải chính NTRIP (0 = qua TCP/IP stack, 1 = qua LoRa).
 
-### Cấu hình hoạt động:
+### Cấu hình hoạt động MẶC ĐỊNH:
 Các cấu hình sau được khai báo dưới dạng hằng số inline trong `include/Prog_Config.h` và có thể được sửa trực tiếp trong file này:
 
 - Thiết lập chân UART kết nối với module GNSS (`RX_GNSS`, `TX_GNSS`)
@@ -98,6 +98,8 @@ Các cấu hình sau được khai báo dưới dạng hằng số inline trong 
 - Cấu hình kết nối MQTT (`Server`, `Port`, `User`, `Pass`, `Topics`)
 - Cấu hình tài khoản NTRIP (`NTRIP_MODE`, `NTRIP_CASTER_IP`, `NTRIP_CASTER_PORT`, `NTRIP_MOUNTPOINT`, `NTRIP_AUTH`(base64))
 - Cấu hình kiểm tra sức khoẻ định kỳ (`HEALTH_INTERVAL`)
+
+Ở trên là các cấu hình mặc định, nếu không thể đọc cấu hình từ bộ nhớ flash được triển khai bằng Preferences (NVS), chương trình sẽ sử dụng các giá trị mặc định này. Các cấu hình này có thể được thay đổi bằng cách gửi lệnh qua MQTT (xem phần dưới).
 
 ## Gửi lệnh qua MQTT:
 

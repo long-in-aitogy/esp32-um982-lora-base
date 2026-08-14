@@ -38,9 +38,9 @@ namespace UbxCmdBuilder
 
     GnssOptions normalizeGnssOptions(GnssOptions options = {});
     Command buildUbloxOutputConfigCommand(const GnssOptions &options = {});
-    CommandList buildBaseSurveyInCommand(const String &sensorType, uint32_t duration,
+    CommandList buildBaseSurveyInCommand(uint32_t duration,
                                          float accuracy, const GnssOptions &options = {});
-    CommandList buildBaseFixedLlaCommand(const String &sensorType, double lat, double lon,
+    CommandList buildBaseFixedLlaCommand(double lat, double lon,
                                          double alt, float accuracy,
                                          const GnssOptions &options = {});
     CommandList buildGeotekLteUnicoreConfig(const String &setupMethod, uint32_t duration = 60,

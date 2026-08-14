@@ -46,38 +46,10 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     std::vector<String> cmdWords = splitCommand(cmd);
     cmd_action_t action = handleCommand(cmdWords);
     String gnssResponse = "";
-    switch (action) {
-      case CMD_ACTION_PASS_TO_GNSS_MODULE:
-        Serial.println("[MQTT DOWNLINK] Gui lenh den UM980 qua Serial1");
-        Serial.flush();
-        for (const auto& word : cmdWords) {
-          Serial1.print(word);
-          Serial1.print(" ");
-        }
-        Serial1.print("\r\n");
-
-        #if PROGRAM_DEBUG
-        gnssResponse = Serial1.readStringUntil('\n');
-        Serial.print("[UM980 RESPONSE] ");
-        Serial.println(gnssResponse);
-        #endif
-
-        Serial1.print("SAVECONFIG\r\n");
-
-        #if PROGRAM_DEBUG
-        gnssResponse = Serial1.readStringUntil('\n');
-        Serial.print("[UM980 RESPONSE] ");
-        Serial.println(gnssResponse);
-        #endif
-        break;
-
-      case CMD_ACTION_ESP_RESTART:
-        Serial.println("[MQTT DOWNLINK] Gui lenh yeu cau khoi dong lai ESP32");
-        shutdownTcpTransportBeforeRestart();
-        break;
-
-      default:
-        break;
+    if (action == CMD_ACTION_ESP_RESTART) {
+      Serial.println("[MQTT DOWNLINK] Yeu cau ESP32 khoi dong lai.");
+      shutdownTcpTransportBeforeRestart();
+      ESP.restart();
     }
   }
 }

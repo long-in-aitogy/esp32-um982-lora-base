@@ -34,6 +34,13 @@
 #define RTCM_COMMUNICATION_PROTOCOL TCP_IP // Chọn giữa TCP_IP hoặc LORA_SERIAL
 #endif
 
+#define GNSS_MODULE_TYPE_UBLOX 0
+#define GNSS_MODULE_TYPE_UNICORE 1
+
+#ifndef GNSS_MODULE_TYPE
+#define GNSS_MODULE_TYPE GNSS_MODULE_TYPE_UBLOX // Chọn giữa GNSS_MODULE_TYPE_UBLOX hoặc GNSS_MODULE_TYPE_UNICORE
+#endif
+
 // ==== CHỌN 1 TRONG 2 PHƯƠNG THỨC KẾT NỐI (KHÔNG ĐƯỢC CHỌN CẢ HAI) ====
 #if (!CONNECT_USING_WIFI && !CONNECT_USING_4G)
     #warning "Không chọn phương thức kết nối nào! Sẽ sử dụng WiFi."

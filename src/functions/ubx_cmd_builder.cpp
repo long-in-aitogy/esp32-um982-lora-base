@@ -175,6 +175,7 @@ namespace UbxCmdBuilder
         return !strcmp(message, "1230") && o.glo;
     }
     
+#if GNSS_MODULE_TYPE == 1
     void appendUnicoreOutputCommands(CommandList &commands, const String &port, const GnssOptions &options)
     {
         const GnssOptions o = normalizeGnssOptions(options);
@@ -266,6 +267,8 @@ namespace UbxCmdBuilder
                 commands.push_back(delayCommand(200));
             }
     }
+#endif
+
     Command buildTmode3Message() { return Command({0xB5, 0x62, 0x06, 0x71, 0x28, 0x00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}); }
     void finishTmode3Checksum(Command &message)
     {
@@ -298,6 +301,7 @@ namespace UbxCmdBuilder
         return options;
     }
 
+#if GNSS_MODULE_TYPE == 0
     Command buildUbloxOutputConfigCommand(const GnssOptions &options)
     {
         const GnssOptions o = normalizeGnssOptions(options);
@@ -343,12 +347,14 @@ namespace UbxCmdBuilder
             }
         return command;
     }
+#endif
 
-    CommandList buildBaseSurveyInCommand(const String &sensorType, uint32_t duration, float accuracy, const GnssOptions &options)
+    CommandList buildBaseSurveyInCommand(uint32_t duration, float accuracy, const GnssOptions &options)
     {
         CommandList commands;
-        if (sensorType == "Ublox")
-        {
+        // if (sensorType == "Ublox")
+        // {
+        #if GNSS_MODULE_TYPE == 0
             Command message = buildTmode3Message();
             message[8] = 1;
             writeU32(message, 30, duration);
@@ -357,9 +363,10 @@ namespace UbxCmdBuilder
             commands.push_back(message);
             commands.push_back(buildUbloxOutputConfigCommand(options));
             commands.emplace_back(std::begin(UBLOX_SAVE_CONFIG), std::end(UBLOX_SAVE_CONFIG));
-        }
-        else if (sensorType == "Unicorecomm")
-        {
+        // }
+        // else if (sensorType == "Unicorecomm")
+        // {
+        #elif GNSS_MODULE_TYPE == 1
             commands.push_back(asciiCommand("unlogall\r\n"));
             commands.push_back(delayCommand(1000));
             const String cmd = "mode base time " + String(duration) + "\r\n";
@@ -369,15 +376,17 @@ namespace UbxCmdBuilder
             Serial.println("Configuring Unicore output messages on COM3");
             appendUnicoreOutputCommands(commands, "com3", options);
             commands.push_back(asciiCommand("saveconfig\r\n"));
-        }
+        // }
+        #endif
         return commands;
     }
 
-    CommandList buildBaseFixedLlaCommand(const String &sensorType, double lat, double lon, double alt, float accuracy, const GnssOptions &options)
+    CommandList buildBaseFixedLlaCommand(double lat, double lon, double alt, float accuracy, const GnssOptions &options)
     {
         CommandList commands;
-        if (sensorType == "Ublox")
-        {
+        #if GNSS_MODULE_TYPE == 0
+        // if (sensorType == "Ublox")
+        // {
             Command message = buildTmode3Message();
             message[8] = 2;
             message[9] = 1;
@@ -395,9 +404,10 @@ namespace UbxCmdBuilder
             commands.push_back(message);
             commands.push_back(buildUbloxOutputConfigCommand(options));
             commands.emplace_back(std::begin(UBLOX_SAVE_CONFIG), std::end(UBLOX_SAVE_CONFIG));
-        }
-        else if (sensorType == "Unicorecomm")
-        {
+        // }
+        // else if (sensorType == "Unicorecomm")
+        // {
+        #elif GNSS_MODULE_TYPE == 1
             commands.push_back(asciiCommand("unlogall\r\n"));
             commands.push_back(delayCommand(1000));
             const String cmd = "mode base " + String(lat, 10) + " " + String(lon, 10) + " " + String(alt, 4) + "\r\n";
@@ -408,6 +418,7 @@ namespace UbxCmdBuilder
             appendUnicoreOutputCommands(commands, "com3", options);
             commands.push_back(asciiCommand("saveconfig\r\n"));
         }
+        #endif
         return commands;
     }
 

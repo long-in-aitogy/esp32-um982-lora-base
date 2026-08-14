@@ -95,48 +95,46 @@ cmd_action_t handleEspCommand(const std::vector<String> &cmdWords) {
         Serial.println("[MQTT COMMAND DOWNLINK] Lenh yeu cau khoi dong lai ESP32");
         return CMD_ACTION_ESP_RESTART;
     }
+
     prefs.begin("myPrefs", false);
+    
     if (cmdWords[0] == "SET") {
         if (cmdWords[1] == "GNSS" && cmdWords[2] == "TX") {
             Serial.println("[MQTT COMMAND DOWNLINK] Lenh yeu cau cau hinh GNSS TX");
             int gnssTX = cmdWords[3].toInt();
             prefs.putInt("GNSS_TX", gnssTX);
-            prefs.end();
-            return CMD_ACTION_NONE;
+            goto func_end;
         }
         if (cmdWords[1] == "GNSS" && cmdWords[2] == "RX") {
             Serial.println("[MQTT COMMAND DOWNLINK] Lenh yeu cau cau hinh GNSS RX");
-            prefs.begin("myPrefs", false);
             int gnssRX = cmdWords[3].toInt();
             prefs.putInt("GNSS_RX", gnssRX);
-            prefs.end();
-            return CMD_ACTION_NONE;
+            goto func_end;
         }
         if (cmdWords[1] == "4G" && cmdWords[2] == "APN") {
             Serial.println("[MQTT COMMAND DOWNLINK] Lenh yeu cau cau hinh 4G APN");
-            prefs.begin("myPrefs", false);
             String apn = cmdWords[3];
             prefs.putString("APN", apn);
-            return CMD_ACTION_NONE;
+            goto func_end;
         }
         if (cmdWords[1] == "4G" && cmdWords[2] == "USER") {
             Serial.println("[MQTT COMMAND DOWNLINK] Lenh yeu cau cau hinh 4G USER");
-            prefs.begin("myPrefs", false);
             String user = cmdWords[3];
             prefs.putString("GPRS_USER", user);
-            return CMD_ACTION_NONE;
+            goto func_end;
         }
         if (cmdWords[1] == "4G" && cmdWords[2] == "PASS") {
             Serial.println("[MQTT COMMAND DOWNLINK] Lenh yeu cau cau hinh 4G PASS");
-            prefs.begin("myPrefs", false);
             String pass = cmdWords[3];
             prefs.putString("GPRS_PASS", pass);
-            return CMD_ACTION_NONE;
+            goto func_end;
         }
-        prefs.end();
     }
     
     Serial.println("[MQTT COMMAND DOWNLINK] This command is not yet implemented.");
+
+    func_end:
+    prefs.end();
     return CMD_ACTION_NONE;
 }
 

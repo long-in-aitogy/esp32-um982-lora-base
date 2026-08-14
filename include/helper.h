@@ -22,6 +22,10 @@ extern TinyGsm modem;
 #include "functions/RTCM_Receiver.h"
 #endif
 
+#if CONNECT_USING_4G && RTCM_COMMUNICATION_PROTOCOL == TCP_IP
+void shutdownTcpTransportBeforeRestart();
+#endif
+
 // #include "DataStructs.h"
 
 // ================= ĐỊNH NGHĨA CÁC BIẾN TOÀN CỤC =================
@@ -30,5 +34,6 @@ extern bool mqttHealthMode;
 
 // ================= ĐỊNH NGHĨA CÁC HÀM =================
 String formDeviceHealthString(int32_t signalQualityDbm);
+void shutdownTcpTransportBeforeRestart();
 
 #endif

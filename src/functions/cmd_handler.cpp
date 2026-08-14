@@ -38,11 +38,11 @@ cmd_action_t handleGnssBaseCommand(const std::vector<String> &cmdWords) {
     if (cmdWords[0] == "SURVEY_IN") {
         Serial.println("[MQTT COMMAND DOWNLINK] Lenh yeu cau cau hinh GNSS BASE SURVEY_IN");
         if (cmdWords.size() < 3) {
-            Serial.println("[MQTT COMMAND DOWNLINK] Error: Incomplete GNSS BASE SURVEY_IN command.");
+            Serial.println("[MQTT COMMAND DOWNLINK] Error: Lenh GNSS BASE SURVEY_IN khong day du.");
             return CMD_ACTION_NONE;
         }
         else if (cmdWords.size() > 3) {
-            Serial.println("[MQTT COMMAND DOWNLINK] Error: The command is longer than expected.");
+            Serial.println("[MQTT COMMAND DOWNLINK] Error: Lenh qua dai !");
             return CMD_ACTION_NONE;
         }
         uint32_t duration = cmdWords[1].toInt();
@@ -54,16 +54,18 @@ cmd_action_t handleGnssBaseCommand(const std::vector<String> &cmdWords) {
         for (const auto &byte : commandsBytes) {
             Serial1.write(byte);
         }
+        Serial1.flush();
+        Serial.println("[MQTT COMMAND DOWNLINK] Da gui lenh cau hinh GNSS BASE SURVEY_IN.");
 
         return CMD_ACTION_NONE;
     } else if (cmdWords[0] == "FIXED") {
         Serial.println("[MQTT COMMAND DOWNLINK] Lenh yeu cau cau hinh GNSS FIXED LLA");
         if (cmdWords.size() < 5) {
-            Serial.println("[MQTT COMMAND DOWNLINK] Error: Incomplete GNSS BASE SURVEY_IN command.");
+            Serial.println("[MQTT COMMAND DOWNLINK] Error: Lenh khong day du !");
             return CMD_ACTION_NONE;
         }
         else if (cmdWords.size() > 5) {
-            Serial.println("[MQTT COMMAND DOWNLINK] Error: The command is longer than expected.");
+            Serial.println("[MQTT COMMAND DOWNLINK] Error: Lenh qua dai !");
             return CMD_ACTION_NONE;
         }
         double lat = cmdWords[1].toDouble();
@@ -78,10 +80,12 @@ cmd_action_t handleGnssBaseCommand(const std::vector<String> &cmdWords) {
         for (const auto &byte : commandsBytes) {
             Serial1.write(byte);
         }
+        Serial1.flush();
+        Serial.println("[MQTT COMMAND DOWNLINK] Da gui lenh cau hinh GNSS BASE FIXED LLA.");
 
         return CMD_ACTION_NONE;
     } else {
-        Serial.println("[MQTT COMMAND DOWNLINK] Error: Unknown GNSS BASE command: " + cmdWords[0]);
+        Serial.println("[MQTT COMMAND DOWNLINK] LOI - Lenh khong kha dung: " + cmdWords[0]);
         return CMD_ACTION_NONE;
     }
 }
@@ -185,7 +189,7 @@ cmd_action_t handleMqttCommand(const std::vector<String> &cmdWords) {
         prefs.end();
         return CMD_ACTION_NONE;
     }
-    Serial.println("[MQTT COMMAND DOWNLINK] Command is invalid or not yet implemented.");
+    Serial.println("[MQTT COMMAND DOWNLINK] Lenh sai hoac khong kha dung.");
     return CMD_ACTION_NONE;
 }
 

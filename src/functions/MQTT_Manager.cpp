@@ -2,6 +2,8 @@
 #include "Top_Lvl_Config.h"
 #include "Prog_Config.h"
 #include "functions/cmd_handler.h"
+#include <Preferences.h>
+#include "helper.h"
 
 // ================= ĐỊNH NGHĨA CÁC ĐỐI TƯỢNG CẦN CHO KẾT NỐI =================
 #if CONNECT_USING_WIFI
@@ -12,8 +14,14 @@ static WiFiClient espClient;
 #include "hardware/Sim_handler.h"
 extern TinyGsm modem;
 static TinyGsmClient espClient(modem, 1);
+extern TinyGsmClient ntripClient;
 #endif
 PubSubClient mqtt(espClient);
+
+extern Preferences prefs;
+
+static String mqttServerHost;
+static uint16_t mqttServerPort = MQTT_PORT;
 
 // ================= ĐỊNH NGHĨA HÀM =================
 
@@ -38,36 +46,20 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     std::vector<String> cmdWords = splitCommand(cmd);
     cmd_action_t action = handleCommand(cmdWords);
     String gnssResponse = "";
-    switch (action) {
-      case CMD_ACTION_PASS_TO_GNSS_MODULE:
-        Serial.println("[MQTT DOWNLINK] Gui lenh den UM980 qua Serial1");
-        Serial.flush();
-        for (const auto& word : cmdWords) {
-          Serial1.print(word);
-          Serial1.print(" ");
-        }
-        Serial1.print("\r\n");
-
-        #if PROGRAM_DEBUG
-        gnssResponse = Serial1.readStringUntil('\n');
-        Serial.print("[UM980 RESPONSE] ");
-        Serial.println(gnssResponse);
-        #endif
-        break;
-
-      case CMD_ACTION_ESP_RESTART:
-        Serial.println("[ESP32] Khoi dong lai ESP32...");
-        ESP.restart();
-        break;
-
-      default:
-        break;
+    if (action == CMD_ACTION_ESP_RESTART) {
+      Serial.println("[MQTT DOWNLINK] Yeu cau ESP32 khoi dong lai.");
+      shutdownTcpTransportBeforeRestart();
+      ESP.restart();
     }
   }
 }
 
 int setupMQTT() {
-  mqtt.setServer(MQTT_SERVER, MQTT_PORT);
+  prefs.begin("myPrefs", false);
+  mqttServerHost = prefs.getString("MQTT_SERVER", String(MQTT_SERVER));
+  mqttServerPort = prefs.getUShort("MQTT_PORT", MQTT_PORT);
+  prefs.end();
+  mqtt.setServer(mqttServerHost.c_str(), mqttServerPort);
   mqtt.setCallback(mqttCallback);
   return 0;
 }
@@ -76,9 +68,14 @@ int connectMQTT() {
   if (!mqtt.connected()) {
     Serial.println("\n[MQTT] Dang ket noi Broker...");
     String clientId = "ESP32_GW_" + String(random(0xffff), HEX);
-    if (mqtt.connect(clientId.c_str(), MQTT_USER, MQTT_PASS)) {
+    prefs.begin("myPrefs", false);
+    String mqttUser = prefs.getString("MQTT_USER", String(MQTT_USER));
+    String mqttPass = prefs.getString("MQTT_PASS", String(MQTT_PASS));
+    String topicSubCmd = prefs.getString("TPC_SUB_CMD", String(TOPIC_SUB_CMD));
+    prefs.end();
+    if (mqtt.connect(clientId.c_str(), mqttUser.c_str(), mqttPass.c_str())) {
       Serial.println("[MQTT] Da ket noi thanh cong!");
-      mqtt.subscribe(TOPIC_SUB_CMD);
+      mqtt.subscribe(topicSubCmd.c_str());
       return 0;
     } else {
       Serial.print("[MQTT] Loi rc=");
@@ -105,7 +102,10 @@ int publishRaw(const String& payload) {
 
   // Take tcpStreamMutex before publishing to avoid concurrent network ops
   if (tcpStreamMutex != nullptr && xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
-    bool ok = mqtt.publish(TOPIC_PUB_RAW_RTCM, payload.c_str());
+    prefs.begin("myPrefs", false);
+    String topicPubRaw = prefs.getString("TPC_RAW_RTCM", String(TOPIC_PUB_RAW_RTCM));
+    prefs.end();
+    bool ok = mqtt.publish(topicPubRaw.c_str(), payload.c_str());
     xSemaphoreGive(tcpStreamMutex);
     if (ok) {
       Serial.println("[UM982 GNSS RAW CORRECTION DATA] Da publish thanh cong !");
@@ -131,12 +131,15 @@ int publishHealth(const String& payload) {
   }
 
   if (tcpStreamMutex != nullptr && xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
-    bool ok = mqtt.publish(TOPIC_PUB_HEALTH, payload.c_str());
+    prefs.begin("myPrefs", false);
+    String topicPubHealth = prefs.getString("TPC_HEALTH", String(TOPIC_PUB_HEALTH));
+    prefs.end();
+    bool ok = mqtt.publish(topicPubHealth.c_str(), payload.c_str());
     xSemaphoreGive(tcpStreamMutex);
     if (ok) {
       #if PROGRAM_DEBUG
       Serial.print("[MQTT] Da gui thong tin suc khoe len topic: ");
-      Serial.println(TOPIC_PUB_HEALTH);
+      Serial.println(topicPubHealth);
       #endif
       return 0;
     }

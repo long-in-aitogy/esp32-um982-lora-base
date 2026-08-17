@@ -16,6 +16,10 @@ String receiveRtcmFromGnss() {
     #endif
     if (!rtcmData.isEmpty()) {
         Serial.println("[UM980] Da nhan du lieu RTCM tu mach RTK. So byte: " + String(rtcmData.length()));
+        #if PROGRAM_DEBUG
+        Serial.println("[UM980] Du lieu nhan duoc: ");
+        Serial.println(rtcmData);
+        #endif
     } else {
         Serial.println("[UM980] Khong co du lieu RTCM hop le.");
     }

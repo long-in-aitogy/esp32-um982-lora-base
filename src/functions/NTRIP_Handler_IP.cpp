@@ -3,8 +3,10 @@
 
 #include "functions/NTRIP_Handler_IP.h"
 #include "Prog_Config.h"
+#include <Preferences.h>
 
 // ================= BIẾN TOÀN CỤC =================
+extern Preferences prefs;
 static bool isIcyOk = false;
 static unsigned long lastReconnect = 0;
 static bool isNmeaSent = false; // Cờ kiểm tra xem đã gửi NMEA xác thực chưa
@@ -26,21 +28,18 @@ extern SemaphoreHandle_t tcpStreamMutex;
 
 // ================= ĐỊNH NGHĨA HÀM =================
 
-int setupNTRIP() {
-  isIcyOk = false;
-  isNmeaSent = false;
-
+int bootstrapUM980() {
   char nmeaCmdUnlog[] = "UNLOG\r\n";
   // char nmeaCmdSetBase[] = "MODE BASE -1618563.4772 5730003.6935 2278811.0631\r\n";
   char nmeaCmdSetBase[] = "MODE BASE TIME 120 2.5\r\n";
-  char rtcm1084SetOutputCom2[] = "RTCM1084 COM1 1\r\n";
-  char rtcm1074SetOutputCom2[] = "RTCM1074 COM1 1\r\n";
-  char rtcm1006SetOutputCom2[] = "RTCM1006 COM1 1\r\n";
-  char rtcm1124SetOutputCom2[] = "RTCM1124 COM1 1\r\n";
-  char rtcm1087SetOutputCom2[] = "RTCM1087 COM1 1\r\n";
-  char rtcm1077SetOutputCom2[] = "RTCM1077 COM1 1\r\n";
-  char rtcm1127SetOutputCom2[] = "RTCM1127 COM1 1\r\n";
-  char rtcmSetBaudCom2[] = "CONFIG COM1 115200\r\n";
+  char rtcm1084SetOutputCom2[] = "RTCM1084 COM2 1\r\n";
+  char rtcm1074SetOutputCom2[] = "RTCM1074 COM2 1\r\n";
+  char rtcm1006SetOutputCom2[] = "RTCM1006 COM2 1\r\n";
+  char rtcm1124SetOutputCom2[] = "RTCM1124 COM2 1\r\n";
+  char rtcm1087SetOutputCom2[] = "RTCM1087 COM2 1\r\n";
+  char rtcm1077SetOutputCom2[] = "RTCM1077 COM2 1\r\n";
+  char rtcm1127SetOutputCom2[] = "RTCM1127 COM2 1\r\n";
+  char rtcmSetBaudCom2[] = "CONFIG COM2 115200\r\n";
 
   char cmdSaveConfig[] = "saveconfig\r\n";
 
@@ -230,7 +229,12 @@ int setupNTRIP() {
   Serial.println("[NMEA CMD] Response: " + nmeaResponse);
   #endif
   delay(20);
+  return 0;
+}
 
+int setupNTRIP() {
+  isIcyOk = false;
+  isNmeaSent = false;
   return 0;
 }
 
@@ -238,18 +242,25 @@ bool isNtripConnected() {
   return isIcyOk; // Trả về true nếu đã xác thực thành công với Caster
 }
 
-int connectNTRIP() {
+int connectNTRIP() { 
+  prefs.begin("myPrefs", true);
+  String ntripAddr = prefs.getString("NTRIP_SERVER", String(NTRIP_CASTER_IP));
+  String ntripAuth = prefs.getString("NT_AUTH_BS", String(NTRIP_AUTH_BASE_STATION));
+  uint16_t ntripPort = prefs.getUShort("NTRIP_PORT", NTRIP_CASTER_PORT);
+  String ntripMountpoint = prefs.getString("NTRIP_MPT", String(NTRIP_MOUNTPOINT));
+  prefs.end();
+
   Serial.print("\n[NTRIP] Dang mo TCP den: ");
-  Serial.println(NTRIP_CASTER_IP);
+  Serial.println(ntripAddr + ":" + String(ntripPort));
 
   ntripClient.stop();
 
-  if (ntripClient.connect(NTRIP_CASTER_IP, NTRIP_CASTER_PORT)) {
+  if (ntripClient.connect(ntripAddr.c_str(), ntripPort)) {
     delay(1000); // Đợi một chút để đảm bảo kết nối ổn định
     Serial.println("[NTRIP] Da ket noi TCP! Dang gui Header...");
     
     sendRequest:
-    String request = "SOURCE " + String(NTRIP_AUTH_BASE_STATION) + " " + String(NTRIP_MOUNTPOINT) + " \r\n"
+    String request = "SOURCE " + ntripAuth + " " + ntripMountpoint + " \r\n"
           + "Source-Agent: NTRIP NtripServerCMD/1.0\r\n\r\n";
     ntripClient.print(request);
 
@@ -311,10 +322,9 @@ int loopNTRIP(String& rtcmData) {
 
   // 3. Đẩy RTCM lên Caster nếu có dữ liệu
   if (!rtcmData.isEmpty()) {
-    ntripClient.print(rtcmData); // Gửi dữ liệu RTCM lên Caster
-    #if PROGRAM_DEBUG
+    uint8_t* rtcmBytes = (uint8_t*)rtcmData.c_str();
+    ntripClient.write(rtcmBytes, rtcmData.length() + 1); // Gửi dữ liệu RTCM lên Caster
     Serial.println("[NTRIP TASK] Da gui du lieu RTCM len Caster!");
-    #endif
     returnCode += 4;
   }
   #if PROGRAM_DEBUG

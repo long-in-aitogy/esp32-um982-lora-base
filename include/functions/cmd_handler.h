@@ -6,8 +6,7 @@
 
 typedef enum cmd_action {
     CMD_ACTION_NONE = 0,
-    CMD_ACTION_PASS_TO_GNSS_MODULE = 1,
-    CMD_ACTION_ESP_RESTART = 2
+    CMD_ACTION_ESP_RESTART = 1
 } cmd_action_t;
 
 std::vector<String> splitCommand(const String &command);

@@ -1,6 +1,7 @@
 #include "helper.h"
 #include "functions/RTCM_Receiver.h"
 #include "functions/cmd_handler.h"
+#include "functions/serial_comamand_rcv.h"
 
 // ================= ĐỊNH NGHĨA CÁC BIẾN TOÀN CỤC =================
 Preferences prefs;
@@ -21,7 +22,7 @@ String rtcmBuffer = ""; // Bộ đệm đọc RTCM từ UM980 để gửi lên C
 unsigned long lastHealthCheck = 0;
 String latestRtcm = "";
 
-static constexpr uint8_t CONNECTION_FAIL_LIMIT = 5;
+static constexpr uint8_t CONNECTION_FAIL_LIMIT = 10;
 static uint8_t mqttDisconnectCount = 0;
 static uint8_t ntripDisconnectCount = 0;
 static uint8_t gsmDisconnectCount = 0;
@@ -189,10 +190,13 @@ void setup()
     Serial.println("[SETUP] Da khoi dong Task RTCM!");
     #elif RTCM_COMMUNICATION_PROTOCOL == TCP_IP
     Serial.println("[SETUP] Task NTRIP: Gui du lieu RTCM qua NTRIP.");
-    xTaskCreatePinnedToCore(taskNtrip, "NTRIP Task", 4096, nullptr, 2, nullptr, 1);
+    xTaskCreatePinnedToCore(taskNtrip, "NTRIP Task", 4096, nullptr, 2, nullptr, 0);
     Serial.println("[SETUP] Da khoi dong Task NTRIP!");
     #endif
 
+    Serial.println("[SETUP] Task Serial Listener: Nhan va xu ly lenh tu serial.");
+    xTaskCreatePinnedToCore(serial_listener, "Serial Command Task", 4096, nullptr, 2, nullptr, 0);
+    Serial.println("[SETUP] Da khoi dong Task Serial Listener!");
 
     Serial.println("[SETUP] Task Health: Gui thong tin suc khoe thiet bi len MQTT moi 30s");
     xTaskCreatePinnedToCore(healthCheckTask, "Health Task", 4096, nullptr, 1, nullptr, 1);
@@ -422,7 +426,7 @@ __attribute__((noreturn)) void taskMQTT(void* parameter) {
                 if (!mqtt.connected()) {
                     Serial.println("[MQTT TASK] MQTT mat ket noi, dang ket noi lai...");
                     if (++mqttDisconnectCount >= CONNECTION_FAIL_LIMIT) {
-                        Serial.println("[MQTT TASK][ERROR] MQTT mat ket noi qua 5 lan, khoi dong lai ESP32...");
+                        Serial.println("[MQTT TASK][ERROR] MQTT mat ket noi qua 10 lan, khoi dong lai ESP32...");
                         shutdownTcpTransportBeforeRestart();
                         ESP.restart();
                     }

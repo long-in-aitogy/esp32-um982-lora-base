@@ -421,23 +421,7 @@ __attribute__((noreturn)) void taskMQTT(void* parameter) {
     Serial.println("[MQTT TASK] Bat dau task MQTT...");
     while (true) {
         // Prefer to take tcpStreamMutex when available to serialize network operations
-        if (tcpStreamMutex != nullptr) {
-            if (xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
-                if (!mqtt.connected()) {
-                    Serial.println("[MQTT TASK] MQTT mat ket noi, dang ket noi lai...");
-                    if (++mqttDisconnectCount >= CONNECTION_FAIL_LIMIT) {
-                        Serial.println("[MQTT TASK][ERROR] MQTT mat ket noi qua 10 lan, khoi dong lai ESP32...");
-                        shutdownTcpTransportBeforeRestart();
-                        ESP.restart();
-                    }
-                    connectMQTT();
-                } else {
-                    mqttDisconnectCount = 0;
-                    mqtt.loop();
-                }
-                xSemaphoreGive(tcpStreamMutex);
-            }
-        } else {
+        if (tcpStreamMutex == nullptr) {
             // no tcpStreamMutex available, just keep the loop running
             if (mqtt.connected()) {
                 mqttDisconnectCount = 0;
@@ -447,8 +431,27 @@ __attribute__((noreturn)) void taskMQTT(void* parameter) {
                 shutdownTcpTransportBeforeRestart();
                 ESP.restart();
             }
+            vTaskDelay(pdMS_TO_TICKS(100));
         }
-        vTaskDelay(pdMS_TO_TICKS(100));
+        if (xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
+            if (mqtt.connected()) {
+                mqttDisconnectCount = 0;
+                mqtt.loop();
+                xSemaphoreGive(tcpStreamMutex);
+                vTaskDelay(pdMS_TO_TICKS(100));
+                continue;
+            }
+            Serial.println("[MQTT TASK] MQTT mat ket noi, dang ket noi lai...");
+            if (++mqttDisconnectCount >= CONNECTION_FAIL_LIMIT) {
+                Serial.println("[MQTT TASK][ERROR] MQTT mat ket noi qua 10 lan, khoi dong lai ESP32...");
+                shutdownTcpTransportBeforeRestart();
+                ESP.restart();
+            }
+            connectMQTT();
+            xSemaphoreGive(tcpStreamMutex);
+            vTaskDelay(pdMS_TO_TICKS(100));
+        }
+        
     }
 }
 

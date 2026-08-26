@@ -20,6 +20,9 @@ PubSubClient mqtt(espClient);
 
 extern Preferences prefs;
 
+static constexpr size_t MQTT_SERVER_HOST_BUFFER_SIZE = 128;
+static char mqttServerHostBuffer[MQTT_SERVER_HOST_BUFFER_SIZE];
+
 // ================= ĐỊNH NGHĨA HÀM =================
 
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
@@ -56,7 +59,8 @@ int setupMQTT() {
   const String mqttServerHost = prefs.getString("MQTT_SERVER", String(MQTT_SERVER));
   const uint16_t mqttServerPort = prefs.getUShort("MQTT_PORT", MQTT_PORT);
   prefs.end();
-  mqtt.setServer(mqttServerHost.c_str(), mqttServerPort);
+  mqttServerHost.toCharArray(mqttServerHostBuffer, MQTT_SERVER_HOST_BUFFER_SIZE);
+  mqtt.setServer(mqttServerHostBuffer, mqttServerPort);
   mqtt.setCallback(mqttCallback);
   return 0;
 }

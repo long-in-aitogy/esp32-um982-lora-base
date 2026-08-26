@@ -59,8 +59,7 @@ int setupMQTT() {
   mqttServerHost = prefs.getString("MQTT_SERVER", String(MQTT_SERVER));
   mqttServerPort = prefs.getUShort("MQTT_PORT", MQTT_PORT);
   prefs.end();
-  mqttServerHost.toCharArray(mqttServerHostBuffer, MQTT_SERVER_HOST_BUFFER_SIZE);
-  mqtt.setServer(mqttServerHostBuffer, mqttServerPort);
+  mqtt.setServer(mqttServerHost.c_str(), mqttServerPort);
   mqtt.setCallback(mqttCallback);
   return 0;
 }

@@ -22,7 +22,6 @@ extern TinyGsm modem;
 TinyGsmClient ntripClient(modem, 0);
 #endif
 
-extern String latestRtcm;
 extern SemaphoreHandle_t rtcmBufferMutex;
 extern SemaphoreHandle_t tcpStreamMutex;
 

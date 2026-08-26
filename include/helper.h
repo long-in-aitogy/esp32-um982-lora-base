@@ -14,6 +14,7 @@ extern TinyGsm modem;
 #endif
 
 #include "functions/MQTT_Manager.h"
+#include "functions/RtcmFrame.h"
 
 #if RTCM_COMMUNICATION_PROTOCOL == TCP_IP
 #include "functions/NTRIP_Handler_IP.h"
@@ -33,7 +34,7 @@ extern String latestGGA;
 extern bool mqttHealthMode;
 
 // ================= ĐỊNH NGHĨA CÁC HÀM =================
-String formDeviceHealthString(int32_t signalQualityDbm);
+String formDeviceHealthString(int32_t signalQualityDbm, size_t latestRtcmLength);
 void shutdownTcpTransportBeforeRestart();
 
 #endif

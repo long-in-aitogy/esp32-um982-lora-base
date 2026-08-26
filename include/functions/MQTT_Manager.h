@@ -5,6 +5,8 @@
 
 #include <Arduino.h>
 #include <PubSubClient.h>
+#include <cstddef>
+#include <cstdint>
 #include "Top_Lvl_Config.h"
 
 extern PubSubClient mqtt;
@@ -15,7 +17,7 @@ extern SemaphoreHandle_t tcpStreamMutex;
 int setupMQTT();
 int connectMQTT();
 void mqttCallback(char* topic, byte* payload, unsigned int length);
-int publishRaw(const String& payload);
+int publishRaw(const uint8_t* payload, size_t length);
 int publishHealth(const String& payload); // Thêm hàm gửi thông tin sức khỏe
 bool isMqttConnected();             // Thêm hàm lấy trạng thái kết nối MQTT
 

@@ -1,7 +1,10 @@
 #include "helper.h"
 #include "functions/RTCM_Receiver.h"
+#include "functions/RtcmFrame.h"
 #include "functions/cmd_handler.h"
 #include "functions/serial_comamand_rcv.h"
+
+#include <cstring>
 
 // ================= ĐỊNH NGHĨA CÁC BIẾN TOÀN CỤC =================
 Preferences prefs;
@@ -19,7 +22,7 @@ extern WiFiClient ntripClient;
 #if RTCM_COMMUNICATION_PROTOCOL==LORA_SERIAL
 String rtcmBuffer = ""; // Bộ đệm đọc RTCM từ UM980 để gửi lên Caster qua NTRIP
 #endif
-String latestRtcm = "";
+RtcmFrame latestRtcm;
 
 static constexpr uint8_t CONNECTION_FAIL_LIMIT = 10;
 static uint8_t mqttDisconnectCount = 0;
@@ -33,6 +36,7 @@ SemaphoreHandle_t tcpStreamMutex = nullptr;
 /* ===================== NGUYÊN MẪU HÀM ======================== */
 
 void initPrefs();
+static bool copyToRtcmFrame(const String& source, RtcmFrame& destination);
 #if CONNECT_USING_4G && RTCM_COMMUNICATION_PROTOCOL == TCP_IP
 static void settleModemBeforeNtrip();
 #endif
@@ -245,7 +249,7 @@ __attribute__((noreturn)) void taskNtrip(void* parameter) {
         rtcmRead = receiveRtcmFromGnss();
         if (xSemaphoreTake(rtcmBufferMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS)))
         {
-            latestRtcm = rtcmRead;
+            copyToRtcmFrame(rtcmRead, latestRtcm);
             xSemaphoreGive(rtcmBufferMutex);
         }
 
@@ -333,7 +337,7 @@ __attribute__((noreturn))void taskLora(void* parameter) {
             lora_packet_process(rtcmBuffer);
 
             if (rtcmBuffer.isEmpty() && !lastStateWasEmpty) {
-                latestRtcm = tempRtcm;
+                copyToRtcmFrame(tempRtcm, latestRtcm);
                 lastStateWasEmpty = true;
             }
 
@@ -358,21 +362,21 @@ __attribute__((noreturn)) void healthCheckTask(void* parameter) {
     while (true) {
         loopStartTime = millis();
         int32_t signalQualityDbm = -1;
-        #if RTCM_COMMUNICATION_PROTOCOL == TCP_IP
+        RtcmFrame rtcmToPublish;
         if (xSemaphoreTake(rtcmBufferMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS)))
         {
+            #if RTCM_COMMUNICATION_PROTOCOL == TCP_IP
             #if CONNECT_USING_4G
             if (xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
                 signalQualityDbm = modem.getSignalQuality();
                 xSemaphoreGive(tcpStreamMutex);
             }
             #endif
-            healthPayload = formDeviceHealthString(signalQualityDbm);
+            #endif
+            healthPayload = formDeviceHealthString(signalQualityDbm, latestRtcm.length);
+            rtcmToPublish = latestRtcm;
             xSemaphoreGive(rtcmBufferMutex);
         }
-        #else
-            healthPayload = formDeviceHealthString(signalQualityDbm);
-        #endif
         vTaskDelay(1);
         Serial.print("[HEALTH CHECK] ");
         Serial.println(healthPayload);
@@ -392,14 +396,13 @@ __attribute__((noreturn)) void healthCheckTask(void* parameter) {
         Serial.println("[HEALTH CHECK] Kiem tra ket noi MQTT de gui thong tin suc khoe...");
         #endif
 
-        // Publish health and any latest RTCM via thread-safe helpers.
-        // The helpers will wait for MQTT connection and take the tcpStreamMutex.
+        // Publish after releasing rtcmBufferMutex so network delays cannot block RTCM reception.
         publishHealth(healthPayload);
-        if (!latestRtcm.isEmpty()) {
+        if (!rtcmToPublish.isEmpty()) {
             #if PROGRAM_DEBUG
-            Serial.println("[GNSS PUBLISH] Dang gui du lieu NMEA len MQTT...");
+            Serial.println("[GNSS PUBLISH] Dang gui du lieu RTCM len MQTT...");
             #endif
-            publishRaw(latestRtcm); // publishRaw accepts String&
+            publishRaw(rtcmToPublish.data, rtcmToPublish.length);
         }
         vTaskDelay(1);
         if (HEALTH_INTERVAL > (millis() - loopStartTime)) {
@@ -495,6 +498,22 @@ static void settleModemBeforeNtrip() {
     Serial.println("[SETUP][NTRIP] Modem da on dinh, bat dau ket noi NTRIP.");
 }
 #endif
+
+static bool copyToRtcmFrame(const String& source, RtcmFrame& destination) {
+    if (source.length() > RTCM_FRAME_MAX_SIZE) {
+        Serial.printf("[RTCM][ERROR] Goi RTCM qua lon: %u byte (toi da %u). Da bo goi.\n",
+                      static_cast<unsigned int>(source.length()),
+                      static_cast<unsigned int>(RTCM_FRAME_MAX_SIZE));
+        destination.length = 0;
+        return false;
+    }
+
+    destination.length = source.length();
+    if (destination.length > 0) {
+        memcpy(destination.data, source.c_str(), destination.length);
+    }
+    return true;
+}
 
 void initPrefs() {
     prefs.clear();

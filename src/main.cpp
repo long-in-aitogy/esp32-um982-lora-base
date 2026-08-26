@@ -19,7 +19,6 @@ extern WiFiClient ntripClient;
 #if RTCM_COMMUNICATION_PROTOCOL==LORA_SERIAL
 String rtcmBuffer = ""; // Bộ đệm đọc RTCM từ UM980 để gửi lên Caster qua NTRIP
 #endif
-unsigned long lastHealthCheck = 0;
 String latestRtcm = "";
 
 static constexpr uint8_t CONNECTION_FAIL_LIMIT = 10;
@@ -48,11 +47,6 @@ __attribute__((noreturn)) void healthCheckTask(void* parameter);
 __attribute__((noreturn)) void taskMQTT(void* parameter);
 
 /* ==================SETUP VÀ LOOP======================== */
-
-int gnssTX; 
-int gnssRX;
-int rx2ModemTX;
-int tx2ModemRX;
 
 void setup()
 {
@@ -83,11 +77,11 @@ void setup()
         Serial.println("[SETUP] Preferences da duoc khoi tao truoc do, khong can khoi tao lai.");
     }
 
-    gnssTX = prefs.getInt("GNSS_TX", TX_GNSS);
-    gnssRX = prefs.getInt("GNSS_RX", RX_GNSS);
+    const int gnssTX = prefs.getInt("GNSS_TX", TX_GNSS);
+    const int gnssRX = prefs.getInt("GNSS_RX", RX_GNSS);
     #if CONNECT_USING_4G
-    rx2ModemTX = prefs.getInt("RX_TO_MODEM_TX", RX_TO_MODEM_TX);
-    tx2ModemRX = prefs.getInt("TX_TO_MODEM_RX", TX_TO_MODEM_RX);
+    const int rx2ModemTX = prefs.getInt("RX_TO_MODEM_TX", RX_TO_MODEM_TX);
+    const int tx2ModemRX = prefs.getInt("TX_TO_MODEM_RX", TX_TO_MODEM_RX);
     #endif
     prefs.end();
 

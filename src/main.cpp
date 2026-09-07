@@ -1,6 +1,10 @@
 #include "helper.h"
 #include "functions/RTCM_Receiver.h"
+#include "functions/RtcmFrame.h"
 #include "functions/cmd_handler.h"
+#include "functions/serial_comamand_rcv.h"
+
+#include <cstring>
 
 // ================= ĐỊNH NGHĨA CÁC BIẾN TOÀN CỤC =================
 Preferences prefs;
@@ -18,8 +22,12 @@ extern WiFiClient ntripClient;
 #if RTCM_COMMUNICATION_PROTOCOL==LORA_SERIAL
 String rtcmBuffer = ""; // Bộ đệm đọc RTCM từ UM980 để gửi lên Caster qua NTRIP
 #endif
-unsigned long lastHealthCheck = 0;
-String latestRtcm = "";
+RtcmFrame latestRtcm;
+
+static constexpr uint8_t CONNECTION_FAIL_LIMIT = 10;
+static uint8_t mqttDisconnectCount = 0;
+static uint8_t ntripDisconnectCount = 0;
+static uint8_t gsmDisconnectCount = 0;
 
 static constexpr uint8_t CONNECTION_FAIL_LIMIT = 5;
 static uint8_t mqttDisconnectCount = 0;
@@ -33,6 +41,7 @@ SemaphoreHandle_t tcpStreamMutex = nullptr;
 /* ===================== NGUYÊN MẪU HÀM ======================== */
 
 void initPrefs();
+static bool copyToRtcmFrame(const String& source, RtcmFrame& destination);
 #if CONNECT_USING_4G && RTCM_COMMUNICATION_PROTOCOL == TCP_IP
 static void settleModemBeforeNtrip();
 #endif
@@ -82,11 +91,11 @@ void setup()
         Serial.println("[SETUP] Preferences da duoc khoi tao truoc do, khong can khoi tao lai.");
     }
 
-    gnssTX = prefs.getInt("GNSS_TX", TX_GNSS);
-    gnssRX = prefs.getInt("GNSS_RX", RX_GNSS);
+    const int gnssTX = prefs.getInt("GNSS_TX", TX_GNSS);
+    const int gnssRX = prefs.getInt("GNSS_RX", RX_GNSS);
     #if CONNECT_USING_4G
-    rx2ModemTX = prefs.getInt("RX_TO_MODEM_TX", RX_TO_MODEM_TX);
-    tx2ModemRX = prefs.getInt("TX_TO_MODEM_RX", TX_TO_MODEM_RX);
+    const int rx2ModemTX = prefs.getInt("RX_TO_MODEM_TX", RX_TO_MODEM_TX);
+    const int tx2ModemRX = prefs.getInt("TX_TO_MODEM_RX", TX_TO_MODEM_RX);
     #endif
     prefs.end();
 
@@ -189,10 +198,13 @@ void setup()
     Serial.println("[SETUP] Da khoi dong Task RTCM!");
     #elif RTCM_COMMUNICATION_PROTOCOL == TCP_IP
     Serial.println("[SETUP] Task NTRIP: Gui du lieu RTCM qua NTRIP.");
-    xTaskCreatePinnedToCore(taskNtrip, "NTRIP Task", 4096, nullptr, 2, nullptr, 1);
+    xTaskCreatePinnedToCore(taskNtrip, "NTRIP Task", 4096, nullptr, 2, nullptr, 0);
     Serial.println("[SETUP] Da khoi dong Task NTRIP!");
     #endif
 
+    Serial.println("[SETUP] Task Serial Listener: Nhan va xu ly lenh tu serial.");
+    xTaskCreatePinnedToCore(serial_listener, "Serial Command Task", 4096, nullptr, 2, nullptr, 0);
+    Serial.println("[SETUP] Da khoi dong Task Serial Listener!");
 
     Serial.println("[SETUP] Task Health: Gui thong tin suc khoe thiet bi len MQTT moi 30s");
     xTaskCreatePinnedToCore(healthCheckTask, "Health Task", 4096, nullptr, 1, nullptr, 1);
@@ -247,7 +259,7 @@ __attribute__((noreturn)) void taskNtrip(void* parameter) {
         rtcmRead = receiveRtcmFromGnss();
         if (xSemaphoreTake(rtcmBufferMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS)))
         {
-            latestRtcm = rtcmRead;
+            copyToRtcmFrame(rtcmRead, latestRtcm);
             xSemaphoreGive(rtcmBufferMutex);
         }
 
@@ -335,7 +347,7 @@ __attribute__((noreturn))void taskLora(void* parameter) {
             lora_packet_process(rtcmBuffer);
 
             if (rtcmBuffer.isEmpty() && !lastStateWasEmpty) {
-                latestRtcm = tempRtcm;
+                copyToRtcmFrame(tempRtcm, latestRtcm);
                 lastStateWasEmpty = true;
             }
 
@@ -360,21 +372,21 @@ __attribute__((noreturn)) void healthCheckTask(void* parameter) {
     while (true) {
         loopStartTime = millis();
         int32_t signalQualityDbm = -1;
-        #if RTCM_COMMUNICATION_PROTOCOL == TCP_IP
+        RtcmFrame rtcmToPublish;
         if (xSemaphoreTake(rtcmBufferMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS)))
         {
+            #if RTCM_COMMUNICATION_PROTOCOL == TCP_IP
             #if CONNECT_USING_4G
             if (xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
                 signalQualityDbm = modem.getSignalQuality();
                 xSemaphoreGive(tcpStreamMutex);
             }
             #endif
-            healthPayload = formDeviceHealthString(signalQualityDbm);
+            #endif
+            healthPayload = formDeviceHealthString(signalQualityDbm, latestRtcm.length);
+            rtcmToPublish = latestRtcm;
             xSemaphoreGive(rtcmBufferMutex);
         }
-        #else
-            healthPayload = formDeviceHealthString(signalQualityDbm);
-        #endif
         vTaskDelay(1);
         Serial.print("[HEALTH CHECK] ");
         Serial.println(healthPayload);
@@ -394,14 +406,13 @@ __attribute__((noreturn)) void healthCheckTask(void* parameter) {
         Serial.println("[HEALTH CHECK] Kiem tra ket noi MQTT de gui thong tin suc khoe...");
         #endif
 
-        // Publish health and any latest RTCM via thread-safe helpers.
-        // The helpers will wait for MQTT connection and take the tcpStreamMutex.
+        // Publish after releasing rtcmBufferMutex so network delays cannot block RTCM reception.
         publishHealth(healthPayload);
-        if (!latestRtcm.isEmpty()) {
+        if (!rtcmToPublish.isEmpty()) {
             #if PROGRAM_DEBUG
-            Serial.println("[GNSS PUBLISH] Dang gui du lieu NMEA len MQTT...");
+            Serial.println("[GNSS PUBLISH] Dang gui du lieu RTCM len MQTT...");
             #endif
-            publishRaw(latestRtcm); // publishRaw accepts String&
+            publishRaw(rtcmToPublish.data, rtcmToPublish.length);
         }
         vTaskDelay(1);
         if (HEALTH_INTERVAL > (millis() - loopStartTime)) {
@@ -417,23 +428,7 @@ __attribute__((noreturn)) void taskMQTT(void* parameter) {
     Serial.println("[MQTT TASK] Bat dau task MQTT...");
     while (true) {
         // Prefer to take tcpStreamMutex when available to serialize network operations
-        if (tcpStreamMutex != nullptr) {
-            if (xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
-                if (!mqtt.connected()) {
-                    Serial.println("[MQTT TASK] MQTT mat ket noi, dang ket noi lai...");
-                    if (++mqttDisconnectCount >= CONNECTION_FAIL_LIMIT) {
-                        Serial.println("[MQTT TASK][ERROR] MQTT mat ket noi qua 5 lan, khoi dong lai ESP32...");
-                        shutdownTcpTransportBeforeRestart();
-                        ESP.restart();
-                    }
-                    connectMQTT();
-                } else {
-                    mqttDisconnectCount = 0;
-                    mqtt.loop();
-                }
-                xSemaphoreGive(tcpStreamMutex);
-            }
-        } else {
+        if (tcpStreamMutex == nullptr) {
             // no tcpStreamMutex available, just keep the loop running
             if (mqtt.connected()) {
                 mqttDisconnectCount = 0;
@@ -443,8 +438,27 @@ __attribute__((noreturn)) void taskMQTT(void* parameter) {
                 shutdownTcpTransportBeforeRestart();
                 ESP.restart();
             }
+            vTaskDelay(pdMS_TO_TICKS(100));
         }
-        vTaskDelay(pdMS_TO_TICKS(100));
+        if (xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
+            if (mqtt.connected()) {
+                mqttDisconnectCount = 0;
+                mqtt.loop();
+                xSemaphoreGive(tcpStreamMutex);
+                vTaskDelay(pdMS_TO_TICKS(100));
+                continue;
+            }
+            Serial.println("[MQTT TASK] MQTT mat ket noi, dang ket noi lai...");
+            if (++mqttDisconnectCount >= CONNECTION_FAIL_LIMIT) {
+                Serial.println("[MQTT TASK][ERROR] MQTT mat ket noi qua 10 lan, khoi dong lai ESP32...");
+                shutdownTcpTransportBeforeRestart();
+                ESP.restart();
+            }
+            connectMQTT();
+            xSemaphoreGive(tcpStreamMutex);
+            vTaskDelay(pdMS_TO_TICKS(100));
+        }
+        
     }
 }
 
@@ -494,6 +508,22 @@ static void settleModemBeforeNtrip() {
     Serial.println("[SETUP][NTRIP] Modem da on dinh, bat dau ket noi NTRIP.");
 }
 #endif
+
+static bool copyToRtcmFrame(const String& source, RtcmFrame& destination) {
+    if (source.length() > RTCM_FRAME_MAX_SIZE) {
+        Serial.printf("[RTCM][ERROR] Goi RTCM qua lon: %u byte (toi da %u). Da bo goi.\n",
+                      static_cast<unsigned int>(source.length()),
+                      static_cast<unsigned int>(RTCM_FRAME_MAX_SIZE));
+        destination.length = 0;
+        return false;
+    }
+
+    destination.length = source.length();
+    if (destination.length > 0) {
+        memcpy(destination.data, source.c_str(), destination.length);
+    }
+    return true;
+}
 
 void initPrefs() {
     prefs.clear();

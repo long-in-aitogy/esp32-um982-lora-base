@@ -29,6 +29,11 @@ static uint8_t mqttDisconnectCount = 0;
 static uint8_t ntripDisconnectCount = 0;
 static uint8_t gsmDisconnectCount = 0;
 
+static constexpr uint8_t CONNECTION_FAIL_LIMIT = 5;
+static uint8_t mqttDisconnectCount = 0;
+static uint8_t ntripDisconnectCount = 0;
+static uint8_t gsmDisconnectCount = 0;
+
 // Semaphore
 SemaphoreHandle_t rtcmBufferMutex = nullptr;
 SemaphoreHandle_t tcpStreamMutex = nullptr;
@@ -51,6 +56,11 @@ __attribute__((noreturn)) void healthCheckTask(void* parameter);
 __attribute__((noreturn)) void taskMQTT(void* parameter);
 
 /* ==================SETUP VÀ LOOP======================== */
+
+int gnssTX; 
+int gnssRX;
+int rx2ModemTX;
+int tx2ModemRX;
 
 void setup()
 {

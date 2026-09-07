@@ -506,6 +506,8 @@ void initPrefs() {
     prefs.putString("APN", "v-internet"); // cấu hình đc, chưa lấy đc
     prefs.putString("GPRS_USER", ""); // cấu hình đc, chưa lấy đc
     prefs.putString("GPRS_PASS", ""); // cấu hình đc, chưa lấy đc
+    prefs.putString("WIFI_SSID", "AITOGY-VP"); // cấu hình đc, lấy đc
+    prefs.putString("WIFI_PASS", "123456789"); // cấu hình đc, lấy đc
     prefs.putInt("GNSS_RX", RX_GNSS); // cấu hình được, lấy được
     prefs.putInt("GNSS_TX", TX_GNSS); // cấu hình được, lấy được
     prefs.putString("NTRIP_SERVER", NTRIP_CASTER_IP); // cấu hình được, lấy được

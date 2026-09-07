@@ -101,9 +101,9 @@ Các cấu hình sau được khai báo dưới dạng hằng số inline trong 
 
 Ở trên là các cấu hình mặc định, nếu không thể đọc cấu hình từ bộ nhớ flash được triển khai bằng Preferences (NVS), chương trình sẽ sử dụng các giá trị mặc định này. Các cấu hình này có thể được thay đổi bằng cách gửi lệnh qua MQTT (xem phần dưới).
 
-## Gửi lệnh qua MQTT:
+## Gửi lệnh qua MQTT hoặc Serial Monitor:
 
-Thiết bị nhận nội dung (payload) từ topic lệnh MQTT đã cấu hình. Mỗi lệnh phải bắt đầu bằng `ATG`; các thành phần được ngăn cách bằng khoảng trắng. Từ khóa phân biệt chữ hoa/chữ thường. Giá trị không được chứa khoảng trắng (ví dụ mật khẩu có khoảng trắng hiện chưa được hỗ trợ).
+Thiết bị nhận nội dung (payload) từ Serial (nếu kết nối serial với máy tính hoặc điện thoại) hoặc qua topic lệnh MQTT đã cấu hình. Mỗi lệnh phải bắt đầu bằng `ATG`; các thành phần được ngăn cách bằng khoảng trắng. Từ khóa phân biệt chữ hoa/chữ thường. Giá trị không được chứa khoảng trắng (ví dụ mật khẩu có khoảng trắng hiện chưa được hỗ trợ).
 
 ### Cấu trúc chung
 
@@ -167,3 +167,4 @@ Các lệnh này cấu hình module GNSS ở chế độ base và được gửi
 | `ATG CONFIG RESET` | Đánh dấu khôi phục cấu hình mặc định, sau đó khởi động lại ESP32. Lần khởi động kế tiếp sẽ xóa toàn bộ cấu hình đã lưu trong Preferences và nạp lại giá trị mặc định. |
 
 > Lưu ý: Firmware hiện không phản hồi trạng thái lệnh qua MQTT. Theo dõi Serial Monitor để kiểm tra log xử lý lệnh; riêng lệnh GNSS sẽ báo lỗi khi thiếu hoặc thừa tham số.
+

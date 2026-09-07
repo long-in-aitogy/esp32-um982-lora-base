@@ -1,6 +1,5 @@
 #include "helper.h"
 
-extern String latestRtcm;
 #if CONNECT_USING_4G
 extern TinyGsmClient ntripClient;
 #elif CONNECT_USING_WIFI
@@ -24,7 +23,7 @@ void shutdownTcpTransportBeforeRestart() {
 }
 #endif
 
-String formDeviceHealthString(int32_t signalQualityDbm)
+String formDeviceHealthString(int32_t signalQualityDbm, size_t latestRtcmLength)
 {
     // 1. Lấy các thông số hệ thống
     unsigned long uptime_s = millis() / 1000;
@@ -46,7 +45,7 @@ String formDeviceHealthString(int32_t signalQualityDbm)
     // Nếu dùng LoRa thì không có NTRIP qua TCP/IP, sẽ có cách khác để kiểm tra. Hiện chưa có mã nguồn cho LoRa nên tạm thời để false.
     bool ntripOk = false;
 #endif
-    bool gnssOk = (latestRtcm.length() > 10); // Nếu có chuỗi NMEA hợp lệ
+    bool gnssOk = (latestRtcmLength > 10); // Có dữ liệu RTCM hợp lệ
 
     // 2. Đóng gói thành JSON
     std::string healthPayload = "{";

@@ -21,7 +21,6 @@ PubSubClient mqtt(espClient);
 extern Preferences prefs;
 
 static String mqttServerHost;
-static uint16_t mqttServerPort = MQTT_PORT;
 
 // ================= ĐỊNH NGHĨA HÀM =================
 
@@ -55,6 +54,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 }
 
 int setupMQTT() {
+  static uint16_t mqttServerPort = MQTT_PORT;
   prefs.begin("myPrefs", false);
   mqttServerHost = prefs.getString("MQTT_SERVER", String(MQTT_SERVER));
   mqttServerPort = prefs.getUShort("MQTT_PORT", MQTT_PORT);
@@ -87,8 +87,8 @@ int connectMQTT() {
   return 0;
 }
 
-int publishRaw(const String& payload) {
-  if (payload.isEmpty()) return -1;
+int publishRaw(const uint8_t* payload, size_t length) {
+  if (payload == nullptr || length == 0) return -1;
 
   // Wait for MQTT connection (timeout after 5s)
   const uint32_t start = millis();
@@ -105,7 +105,7 @@ int publishRaw(const String& payload) {
     prefs.begin("myPrefs", false);
     String topicPubRaw = prefs.getString("TPC_RAW_RTCM", String(TOPIC_PUB_RAW_RTCM));
     prefs.end();
-    bool ok = mqtt.publish(topicPubRaw.c_str(), payload.c_str());
+    bool ok = mqtt.publish(topicPubRaw.c_str(), payload, static_cast<unsigned int>(length));
     xSemaphoreGive(tcpStreamMutex);
     if (ok) {
       Serial.println("[UM982 GNSS RAW CORRECTION DATA] Da publish thanh cong !");

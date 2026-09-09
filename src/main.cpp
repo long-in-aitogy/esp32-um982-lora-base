@@ -26,10 +26,10 @@ namespace {
 
     class deviceHealth {
     public:
-        static unsigned long lastHealthCheck;
-        static uint8_t mqttDisconnectCount;
-        static uint8_t ntripDisconnectCount;
-        static uint8_t gsmDisconnectCount;
+        inline static unsigned long lastHealthCheck = 0;
+        inline static uint8_t mqttDisconnectCount = 0;
+        inline static uint8_t ntripDisconnectCount = 0;
+        inline static uint8_t gsmDisconnectCount = 0;
     };
 }
 

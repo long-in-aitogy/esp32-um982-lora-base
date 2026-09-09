@@ -9,9 +9,12 @@
 extern Preferences prefs;
 
 namespace {
-  bool isIcyOk = false;
-  unsigned long lastReconnect = 0;
-  bool isNmeaSent = false; // Cờ kiểm tra xem đã gửi NMEA xác thực chưa
+  class ntripConfig {
+  public:
+    inline static bool isIcyOk = false;
+    inline static unsigned long lastReconnect = 0;
+    inline static bool isNmeaSent = false; // Cờ kiểm tra xem đã gửi NMEA xác thực chưa
+  };
 
   // ================= HẰNG STRING =================
   inline constexpr const char nmeaCmdUnlog[] = "UNLOG\r\n";
@@ -236,13 +239,13 @@ int bootstrapUM980() {
 }
 
 int setupNTRIP() {
-  isIcyOk = false;
-  isNmeaSent = false;
+  ntripConfig::isIcyOk = false;
+  ntripConfig::isNmeaSent = false;
   return 0;
 }
 
 bool isNtripConnected() {
-  return isIcyOk; // Trả về true nếu đã xác thực thành công với Caster
+  return ntripConfig::isIcyOk; // Trả về true nếu đã xác thực thành công với Caster
 }
 
 int connectNTRIP() { 
@@ -283,15 +286,15 @@ int connectNTRIP() {
         #endif
         
         if (response.indexOf("ICY 200 OK") != -1 || response.indexOf("ICY OK") != -1) {
-          isIcyOk = true;
-          isNmeaSent = false;
+          ntripConfig::isIcyOk = true;
+          ntripConfig::isNmeaSent = false;
           Serial.println("[NTRIP] Xac thuc THANH CONG (ICY OK)!");
           break;
         }
       }
       vTaskDelay(pdMS_TO_TICKS(1));
     }
-    if (!isIcyOk) {
+    if (!ntripConfig::isIcyOk) {
       Serial.println("[NTRIP] Khong nhan duoc ICY OK tu Caster!");
     }
     // goto sendRequest; // Thử gửi lại request nếu không nhận được phản hồi
@@ -308,9 +311,9 @@ int loopNTRIP(String& rtcmData) {
   // 1. Quản lý mất kết nối
   if (!ntripClient.connected()) {
     ntripClient.stop();
-    isIcyOk = false;
-    if (millis() - lastReconnect > 5000) { // Thử lại sau 7 giây
-      lastReconnect = millis();
+    ntripConfig::isIcyOk = false;
+    if (millis() - ntripConfig::lastReconnect > 5000) { // Thử lại sau 7 giây
+      ntripConfig::lastReconnect = millis();
       return 504; // chuẩn bị kết nối lại
     }
     return 500; // Chưa kết nối, sẽ quay lại ở vòng tiếp theo của loop()
@@ -318,7 +321,7 @@ int loopNTRIP(String& rtcmData) {
 
   // 2. Xử lý sau khi kết nối thành công / cảnh báo nếu không kết nối thành công
   #if PROGRAM_DEBUG
-  if (!isIcyOk) {
+  if (!ntripConfig::isIcyOk) {
     Serial.println("[NTRIP][WARN] Chua xac thuc voi Caster, du lieu van se duoc gui nhung khong dam bao se toi duoc caster...");
   }
   #endif

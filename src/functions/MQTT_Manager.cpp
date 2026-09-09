@@ -8,20 +8,28 @@
 // ================= ĐỊNH NGHĨA CÁC ĐỐI TƯỢNG CẦN CHO KẾT NỐI =================
 #if CONNECT_USING_WIFI
 #include "hardware/Wifi_handler.h"
-static WiFiClient espClient;
+namespace {
+  WiFiClient espClient;
+}
 #endif
 #if CONNECT_USING_4G
 #include "hardware/Sim_handler.h"
 extern TinyGsm modem;
-static TinyGsmClient espClient(modem, 1);
+namespace {
+  TinyGsmClient espClient(modem, 1);
+}
 extern TinyGsmClient ntripClient;
 #endif
 PubSubClient mqtt(espClient);
 
 extern Preferences prefs;
 
-static String mqttServerHost;
-static uint16_t mqttServerPort = MQTT_PORT;
+namespace {
+  String& mqttServerHost() {
+    static String serverHost;
+    return serverHost;
+  }
+}
 
 // ================= ĐỊNH NGHĨA HÀM =================
 
@@ -56,10 +64,10 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
 int setupMQTT() {
   prefs.begin("myPrefs", false);
-  mqttServerHost = prefs.getString("MQTT_SERVER", String(MQTT_SERVER));
-  mqttServerPort = prefs.getUShort("MQTT_PORT", MQTT_PORT);
+  mqttServerHost() = prefs.getString("MQTT_SERVER", String(MQTT_SERVER));
+  uint16_t mqttServerPort = prefs.getUShort("MQTT_PORT", MQTT_PORT);
   prefs.end();
-  mqtt.setServer(mqttServerHost.c_str(), mqttServerPort);
+  mqtt.setServer(mqttServerHost().c_str(), mqttServerPort);
   mqtt.setCallback(mqttCallback);
   return 0;
 }

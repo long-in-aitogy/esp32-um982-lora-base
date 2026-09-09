@@ -8,6 +8,7 @@
 
 extern SemaphoreHandle_t rtcmBufferMutex;
 extern SemaphoreHandle_t tcpStreamMutex;
+extern String latestRtcm; // Biến toàn cục để lưu dữ liệu RTCM mới nhất từ NTRIP
 
 // =============== KHAI BÁO HÀM =================
 
@@ -16,7 +17,5 @@ int bootstrapUM980();
 int loopNTRIP(String& rtcmData);
 int connectNTRIP();
 bool isNtripConnected(); // Thêm hàm lấy trạng thái NTRIP
-
-extern String latestRtcm; // Biến toàn cục để lưu dữ liệu RTCM mới nhất từ NTRIP
 
 #endif

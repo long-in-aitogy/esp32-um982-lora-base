@@ -7,9 +7,29 @@
 
 // ================= BIẾN TOÀN CỤC =================
 extern Preferences prefs;
-static bool isIcyOk = false;
-static unsigned long lastReconnect = 0;
-static bool isNmeaSent = false; // Cờ kiểm tra xem đã gửi NMEA xác thực chưa
+
+namespace {
+  class ntripConfig {
+  public:
+    inline static bool isIcyOk = false;
+    inline static unsigned long lastReconnect = 0;
+    inline static bool isNmeaSent = false; // Cờ kiểm tra xem đã gửi NMEA xác thực chưa
+  };
+
+  // ================= HẰNG STRING =================
+  inline constexpr const char nmeaCmdUnlog[] = "UNLOG\r\n";
+  // char nmeaCmdSetBase[] = "MODE BASE -1618563.4772 5730003.6935 2278811.0631\r\n";
+  inline constexpr const char nmeaCmdSetBase[] = "MODE BASE TIME 120 2.5\r\n";
+  inline constexpr const char rtcm1084SetOutputCom2[] = "RTCM1084 COM2 1\r\n";
+  inline constexpr const char rtcm1074SetOutputCom2[] = "RTCM1074 COM2 1\r\n";
+  inline constexpr const char rtcm1006SetOutputCom2[] = "RTCM1006 COM2 1\r\n";
+  inline constexpr const char rtcm1124SetOutputCom2[] = "RTCM1124 COM2 1\r\n";
+  inline constexpr const char rtcm1087SetOutputCom2[] = "RTCM1087 COM2 1\r\n";
+  inline constexpr const char rtcm1077SetOutputCom2[] = "RTCM1077 COM2 1\r\n";
+  inline constexpr const char rtcm1127SetOutputCom2[] = "RTCM1127 COM2 1\r\n";
+  inline constexpr const char rtcmSetBaudCom2[] = "CONFIG COM2 115200\r\n";
+  inline constexpr const char cmdSaveConfig[] = "saveconfig\r\n";
+}
 
 // ================= CÁC ĐỐI TƯỢNG KẾT NỐI =================
 #if CONNECT_USING_WIFI
@@ -29,20 +49,6 @@ extern SemaphoreHandle_t tcpStreamMutex;
 // ================= ĐỊNH NGHĨA HÀM =================
 
 int bootstrapUM980() {
-  char nmeaCmdUnlog[] = "UNLOG\r\n";
-  // char nmeaCmdSetBase[] = "MODE BASE -1618563.4772 5730003.6935 2278811.0631\r\n";
-  char nmeaCmdSetBase[] = "MODE BASE TIME 120 2.5\r\n";
-  char rtcm1084SetOutputCom2[] = "RTCM1084 COM2 1\r\n";
-  char rtcm1074SetOutputCom2[] = "RTCM1074 COM2 1\r\n";
-  char rtcm1006SetOutputCom2[] = "RTCM1006 COM2 1\r\n";
-  char rtcm1124SetOutputCom2[] = "RTCM1124 COM2 1\r\n";
-  char rtcm1087SetOutputCom2[] = "RTCM1087 COM2 1\r\n";
-  char rtcm1077SetOutputCom2[] = "RTCM1077 COM2 1\r\n";
-  char rtcm1127SetOutputCom2[] = "RTCM1127 COM2 1\r\n";
-  char rtcmSetBaudCom2[] = "CONFIG COM2 115200\r\n";
-
-  char cmdSaveConfig[] = "saveconfig\r\n";
-
   // tắt tính năng log trước khi bật lại
   unsigned long WaitStartTime = millis();
   while (!Serial1.available() && millis() - WaitStartTime < 2000) {
@@ -233,13 +239,13 @@ int bootstrapUM980() {
 }
 
 int setupNTRIP() {
-  isIcyOk = false;
-  isNmeaSent = false;
+  ntripConfig::isIcyOk = false;
+  ntripConfig::isNmeaSent = false;
   return 0;
 }
 
 bool isNtripConnected() {
-  return isIcyOk; // Trả về true nếu đã xác thực thành công với Caster
+  return ntripConfig::isIcyOk; // Trả về true nếu đã xác thực thành công với Caster
 }
 
 int connectNTRIP() { 
@@ -280,15 +286,15 @@ int connectNTRIP() {
         #endif
         
         if (response.indexOf("ICY 200 OK") != -1 || response.indexOf("ICY OK") != -1) {
-          isIcyOk = true;
-          isNmeaSent = false;
+          ntripConfig::isIcyOk = true;
+          ntripConfig::isNmeaSent = false;
           Serial.println("[NTRIP] Xac thuc THANH CONG (ICY OK)!");
           break;
         }
       }
       vTaskDelay(pdMS_TO_TICKS(1));
     }
-    if (!isIcyOk) {
+    if (!ntripConfig::isIcyOk) {
       Serial.println("[NTRIP] Khong nhan duoc ICY OK tu Caster!");
     }
     // goto sendRequest; // Thử gửi lại request nếu không nhận được phản hồi
@@ -305,9 +311,9 @@ int loopNTRIP(String& rtcmData) {
   // 1. Quản lý mất kết nối
   if (!ntripClient.connected()) {
     ntripClient.stop();
-    isIcyOk = false;
-    if (millis() - lastReconnect > 5000) { // Thử lại sau 7 giây
-      lastReconnect = millis();
+    ntripConfig::isIcyOk = false;
+    if (millis() - ntripConfig::lastReconnect > 5000) { // Thử lại sau 7 giây
+      ntripConfig::lastReconnect = millis();
       return 504; // chuẩn bị kết nối lại
     }
     return 500; // Chưa kết nối, sẽ quay lại ở vòng tiếp theo của loop()
@@ -315,7 +321,7 @@ int loopNTRIP(String& rtcmData) {
 
   // 2. Xử lý sau khi kết nối thành công / cảnh báo nếu không kết nối thành công
   #if PROGRAM_DEBUG
-  if (!isIcyOk) {
+  if (!ntripConfig::isIcyOk) {
     Serial.println("[NTRIP][WARN] Chua xac thuc voi Caster, du lieu van se duoc gui nhung khong dam bao se toi duoc caster...");
   }
   #endif

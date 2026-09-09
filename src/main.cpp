@@ -280,9 +280,10 @@ __attribute__((noreturn)) void taskNtrip([[maybe_unused]] void* const parameter)
             }
             loopStatus = loopNTRIP(rtcmRead);
             xSemaphoreGive(tcpStreamMutex);
+            deviceHealth::ntripDisconnectCount++;
             if (
                 (loopStatus == 500 || loopStatus == 504 || !isNtripConnected())
-                && ++deviceHealth::ntripDisconnectCount >= CONNECTION_FAIL_LIMIT
+                && deviceHealth::ntripDisconnectCount >= CONNECTION_FAIL_LIMIT
             ) {
                     Serial.println("[NTRIP TASK][ERROR] NTRIP mat ket noi qua 5 lan, khoi dong lai ESP32...");
                     shutdownTcpTransportBeforeRestart();

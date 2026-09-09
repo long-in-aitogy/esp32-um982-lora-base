@@ -1,6 +1,8 @@
 #ifndef DATA_STRUCTS_H
 #define DATA_STRUCTS_H
 
+#include <Wstring.h>
+
 struct gga_data_struct {
   double lat;
   double lon;

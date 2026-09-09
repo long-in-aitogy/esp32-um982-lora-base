@@ -26,8 +26,6 @@ extern TinyGsm modem;
 void shutdownTcpTransportBeforeRestart();
 #endif
 
-// #include "DataStructs.h"
-
 // ================= ĐỊNH NGHĨA CÁC BIẾN TOÀN CỤC =================
 extern String latestGGA;
 extern bool mqttHealthMode;

@@ -24,7 +24,7 @@ void shutdownTcpTransportBeforeRestart() {
 }
 #endif
 
-String formDeviceHealthString(int32_t signalQualityDbm)
+String formDeviceHealthString([[maybe_unused]] int32_t signalQualityDbm)
 {
     // 1. Lấy các thông số hệ thống
     unsigned long uptime_s = millis() / 1000;

@@ -9,9 +9,9 @@
 extern Preferences prefs;
 
 namespace {
-  static bool isIcyOk = false;
-  static unsigned long lastReconnect = 0;
-  static bool isNmeaSent = false; // Cờ kiểm tra xem đã gửi NMEA xác thực chưa
+  bool isIcyOk = false;
+  unsigned long lastReconnect = 0;
+  bool isNmeaSent = false; // Cờ kiểm tra xem đã gửi NMEA xác thực chưa
 
   // ================= HẰNG STRING =================
   inline constexpr const char nmeaCmdUnlog[] = "UNLOG\r\n";

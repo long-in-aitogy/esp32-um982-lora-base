@@ -18,13 +18,21 @@ extern WiFiClient ntripClient;
 #if RTCM_COMMUNICATION_PROTOCOL==LORA_SERIAL
 String rtcmBuffer = ""; // Bộ đệm đọc RTCM từ UM980 để gửi lên Caster qua NTRIP
 #endif
-unsigned long lastHealthCheck = 0;
+
 String latestRtcm = "";
 
-static constexpr uint8_t CONNECTION_FAIL_LIMIT = 5;
-static uint8_t mqttDisconnectCount = 0;
-static uint8_t ntripDisconnectCount = 0;
-static uint8_t gsmDisconnectCount = 0;
+namespace {
+    unsigned long lastHealthCheck = 0;
+    inline constexpr uint8_t CONNECTION_FAIL_LIMIT = 5;
+    uint8_t mqttDisconnectCount = 0;
+    uint8_t ntripDisconnectCount = 0;
+    uint8_t gsmDisconnectCount = 0;
+
+    int gnssTX; 
+    int gnssRX;
+    int rx2ModemTX;
+    int tx2ModemRX;
+}
 
 // Semaphore
 SemaphoreHandle_t rtcmBufferMutex = nullptr;
@@ -48,11 +56,6 @@ __attribute__((noreturn)) void healthCheckTask([[maybe_unused]] void* const para
 __attribute__((noreturn)) void taskMQTT([[maybe_unused]] void* const parameter);
 
 /* ==================SETUP VÀ LOOP======================== */
-
-int gnssTX; 
-int gnssRX;
-int rx2ModemTX;
-int tx2ModemRX;
 
 void setup()
 {

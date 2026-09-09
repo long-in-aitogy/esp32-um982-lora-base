@@ -33,18 +33,19 @@ SemaphoreHandle_t tcpStreamMutex = nullptr;
 /* ===================== NGUYÊN MẪU HÀM ======================== */
 
 void initPrefs();
+static void serviceMqtt(const bool reconnect);
 #if CONNECT_USING_4G && RTCM_COMMUNICATION_PROTOCOL == TCP_IP
 static void settleModemBeforeNtrip();
 #endif
 
 #if RTCM_COMMUNICATION_PROTOCOL == LORA_SERIAL
-__attribute__((noreturn)) void taskLora(void* parameter);
-__attribute__((noreturn)) void taskRtcm(void* parameter);
+__attribute__((noreturn)) void taskLora([[maybe_unused]] void* const parameter);
+__attribute__((noreturn)) void taskRtcm([[maybe_unused]] void* const parameter);
 #else
-__attribute__((noreturn)) void taskNtrip(void* parameter);
+__attribute__((noreturn)) void taskNtrip([[maybe_unused]] void* const parameter);
 #endif
-__attribute__((noreturn)) void healthCheckTask(void* parameter);
-__attribute__((noreturn)) void taskMQTT(void* parameter);
+__attribute__((noreturn)) void healthCheckTask([[maybe_unused]] void* const parameter);
+__attribute__((noreturn)) void taskMQTT([[maybe_unused]] void* const parameter);
 
 /* ==================SETUP VÀ LOOP======================== */
 
@@ -211,7 +212,7 @@ void setup()
 
 #if RTCM_COMMUNICATION_PROTOCOL == LORA_SERIAL
 /* ================= TRIỂN KHAI HÀM TASK ====================== */
-__attribute__((noreturn)) void taskRtcm(void* parameter) {
+__attribute__((noreturn)) void taskRtcm([[maybe_unused]] void* const parameter) {
     // Sử dụng chung rtcmBuffer với taskLora, cần mutex
     while (true) {
         if (xSemaphoreTake(rtcmBufferMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS)))
@@ -239,7 +240,7 @@ __attribute__((noreturn)) void taskRtcm(void* parameter) {
     }
 }
 #else
-__attribute__((noreturn)) void taskNtrip(void* parameter) {
+__attribute__((noreturn)) void taskNtrip([[maybe_unused]] void* const parameter) {
     Serial.println("[NTRIP TASK] Bat dau task NTRIP...");
     int loopStatus = 0;
     String rtcmRead = "";
@@ -294,7 +295,7 @@ __attribute__((noreturn)) void taskNtrip(void* parameter) {
 #endif
 
 #if RTCM_COMMUNICATION_PROTOCOL == LORA_SERIAL
-__attribute__((noreturn))void taskLora(void* parameter) {
+__attribute__((noreturn))void taskLora([[maybe_unused]] void* const parameter) {
     // Sử dụng chung rtcmBuffer với taskRtcm, cần mutex
     String tempRtcm = "";
     bool lastStateWasEmpty = true;
@@ -352,7 +353,7 @@ __attribute__((noreturn))void taskLora(void* parameter) {
 }
 #endif
 
-__attribute__((noreturn)) void healthCheckTask(void* parameter) {
+__attribute__((noreturn)) void healthCheckTask([[maybe_unused]] void* const parameter) {
     // Có tranh chấp tài nguyên với task RTCM và NTRIP publish
     String healthPayload = "";
     uint32_t loopStartTime = 0;
@@ -413,37 +414,21 @@ __attribute__((noreturn)) void healthCheckTask(void* parameter) {
     }
 }
 
-__attribute__((noreturn)) void taskMQTT(void* parameter) {
+__attribute__((noreturn)) void taskMQTT([[maybe_unused]] void* const parameter) {
     Serial.println("[MQTT TASK] Bat dau task MQTT...");
     while (true) {
         // Prefer to take tcpStreamMutex when available to serialize network operations
         if (tcpStreamMutex != nullptr) {
             if (xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
-                if (!mqtt.connected()) {
-                    Serial.println("[MQTT TASK] MQTT mat ket noi, dang ket noi lai...");
-                    if (++mqttDisconnectCount >= CONNECTION_FAIL_LIMIT) {
-                        Serial.println("[MQTT TASK][ERROR] MQTT mat ket noi qua 5 lan, khoi dong lai ESP32...");
-                        shutdownTcpTransportBeforeRestart();
-                        ESP.restart();
-                    }
-                    connectMQTT();
-                } else {
-                    mqttDisconnectCount = 0;
-                    mqtt.loop();
-                }
+                serviceMqtt(true);
                 xSemaphoreGive(tcpStreamMutex);
             }
-        } else {
-            // no tcpStreamMutex available, just keep the loop running
-            if (mqtt.connected()) {
-                mqttDisconnectCount = 0;
-                mqtt.loop();
-            } else if (++mqttDisconnectCount >= CONNECTION_FAIL_LIMIT) {
-                Serial.println("[MQTT TASK][ERROR] MQTT mat ket noi qua 5 lan, khoi dong lai ESP32...");
-                shutdownTcpTransportBeforeRestart();
-                ESP.restart();
-            }
+            vTaskDelay(pdMS_TO_TICKS(100));
+            continue;
         }
+
+        // no tcpStreamMutex available, just keep the loop running
+        serviceMqtt(false);
         vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
@@ -519,4 +504,29 @@ void initPrefs() {
     prefs.putString("TPC_SUB_CMD", "tdm2402/um980_base_001/cmd"); // cấu hình được, lấy được
     prefs.putString("TPC_RAW_RTCM", "tdm2402/um980_base_001/raw/last_rtcm"); // cấu hình đc, lấy được
     prefs.putString("TPC_HEALTH", "tdm2402/um980_base_001/health"); // cấu hình đc, lấy được
+}
+
+static void serviceMqtt(const bool reconnect) {
+    if (mqtt.connected()) {
+        mqttDisconnectCount = 0;
+        mqtt.loop();
+        return;
+    }
+
+    if (reconnect) {
+        Serial.println("[MQTT TASK] MQTT mat ket noi, dang ket noi lai...");
+    }
+    
+    if (
+        const bool restartRequired 
+            = ++mqttDisconnectCount >= CONNECTION_FAIL_LIMIT;
+        restartRequired
+    ) {
+        Serial.println("[MQTT TASK][ERROR] MQTT mat ket noi qua 5 lan, khoi dong lai ESP32...");
+        shutdownTcpTransportBeforeRestart();
+        ESP.restart();
+    }
+    if (reconnect) {
+        connectMQTT();
+    }
 }

@@ -25,7 +25,10 @@ PubSubClient mqtt(espClient);
 extern Preferences prefs;
 
 namespace {
-  String mqttServerHost;
+  String& mqttServerHost() {
+    static String serverHost;
+    return serverHost;
+  }
 }
 
 // ================= ĐỊNH NGHĨA HÀM =================
@@ -61,10 +64,10 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
 int setupMQTT() {
   prefs.begin("myPrefs", false);
-  mqttServerHost = prefs.getString("MQTT_SERVER", String(MQTT_SERVER));
+  mqttServerHost() = prefs.getString("MQTT_SERVER", String(MQTT_SERVER));
   uint16_t mqttServerPort = prefs.getUShort("MQTT_PORT", MQTT_PORT);
   prefs.end();
-  mqtt.setServer(mqttServerHost.c_str(), mqttServerPort);
+  mqtt.setServer(mqttServerHost().c_str(), mqttServerPort);
   mqtt.setCallback(mqttCallback);
   return 0;
 }

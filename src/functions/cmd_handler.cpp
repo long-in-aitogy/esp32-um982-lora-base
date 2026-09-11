@@ -12,7 +12,7 @@ namespace cmd_helper {
         const char *preferenceKey;
     };
 
-    bool hasExactArgumentCount(const std::vector<String> &cmdWords, size_t expectedCount,
+    inline bool hasExactArgumentCount(const std::vector<String> &cmdWords, size_t expectedCount,
                             const char *commandName)
     {
         if (cmdWords.size() == expectedCount) {
@@ -24,7 +24,7 @@ namespace cmd_helper {
         return false;
     }
 
-    cmd_action_t saveStringPreference(const char *key, const String &value)
+    inline cmd_action_t saveStringPreference(const char *key, const String &value)
     {
         prefs.begin("myPrefs", false);
         prefs.putString(key, value);
@@ -32,7 +32,7 @@ namespace cmd_helper {
         return CMD_ACTION_NONE;
     }
 
-    cmd_action_t saveUShortPreference(const char *key, uint16_t value)
+    inline cmd_action_t saveUShortPreference(const char *key, uint16_t value)
     {
         prefs.begin("myPrefs", false);
         prefs.putUShort(key, value);
@@ -40,7 +40,7 @@ namespace cmd_helper {
         return CMD_ACTION_NONE;
     }
 
-    cmd_action_t saveIntPreference(const char *key, int value)
+    inline cmd_action_t saveIntPreference(const char *key, int value)
     {
         prefs.begin("myPrefs", false);
         prefs.putInt(key, value);
@@ -48,7 +48,7 @@ namespace cmd_helper {
         return CMD_ACTION_NONE;
     }
 
-    const char *findPreferenceKey(const String &command,
+    inline const char *findPreferenceKey(const String &command,
                                 const PreferenceMapping *mappings, size_t mappingCount)
     {
         for (size_t i = 0; i < mappingCount; ++i) {
@@ -59,7 +59,7 @@ namespace cmd_helper {
         return nullptr;
     }
 
-    void sendGnssCommands(const UbxCmdBuilder::CommandList &commands)
+    inline void sendGnssCommands(const UbxCmdBuilder::CommandList &commands)
     {
         const UbxCmdBuilder::Command commandBytes = UbxCmdBuilder::commandListToBytes(commands);
         if (!commandBytes.empty()) {

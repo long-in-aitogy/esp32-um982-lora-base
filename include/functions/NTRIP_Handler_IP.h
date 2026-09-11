@@ -17,7 +17,8 @@ int setupNTRIP();
 int bootstrapUM980();
 int loopNTRIP(String& rtcmData);
 int connectNTRIP();
-bool isNtripConnected(); // Thêm hàm lấy trạng thái NTRIP
+// Thêm hàm lấy trạng thái NTRIP
+bool isNtripConnected();
 Client& activeNtripClient();
 
 #endif

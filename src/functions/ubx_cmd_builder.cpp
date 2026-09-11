@@ -91,12 +91,12 @@ namespace UbxCmdBuilder
             data[index + i] = static_cast<uint8_t>(value >> (8 * i));
     }
 
-    Command asciiCommand(const String &text)
+    inline Command asciiCommand(const String &text)
     {
         return Command(text.begin(), text.end());
     }
 
-    Command delayCommand(uint16_t delayMs) {
+    inline Command delayCommand(uint16_t delayMs) {
         return asciiCommand("$DELAY_" + String(delayMs) + "$");
     }
 
@@ -147,7 +147,7 @@ namespace UbxCmdBuilder
         return ubxPacket(0x06, 0x01, payload);
     }
     
-    bool isDiagnosticNmea(const char *name)
+    inline bool isDiagnosticNmea(const char *name)
     {
         return !strcmp(name, "GGA") || !strcmp(name, "GSA") || !strcmp(name, "GSV") || !strcmp(name, "GST");
     }

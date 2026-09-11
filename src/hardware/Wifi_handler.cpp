@@ -1,8 +1,3 @@
-#include "Top_Lvl_Config.h"
-
-#if CONNECT_USING_WIFI
-#define WIFI_CODE
-
 #include "Prog_Config.h"
 #include "hardware/Wifi_handler.h"
 
@@ -28,5 +23,3 @@ bool setupWiFi() {
   Serial.println("\n[WIFI] Ket noi THANH CONG! IP: " + WiFi.localIP().toString());
   return true;
 }
-
-#endif // WIFI_CODE

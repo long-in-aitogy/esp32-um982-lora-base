@@ -6,21 +6,16 @@
 #include "helper.h"
 
 // ================= ĐỊNH NGHĨA CÁC ĐỐI TƯỢNG CẦN CHO KẾT NỐI =================
-#if CONNECT_USING_WIFI
 #include "hardware/Wifi_handler.h"
 namespace {
-  WiFiClient espClient;
+  WiFiClient wifiMqttClient;
 }
-#endif
-#if CONNECT_USING_4G
 #include "hardware/Sim_handler.h"
 extern TinyGsm modem;
 namespace {
-  TinyGsmClient espClient(modem, 1);
+  TinyGsmClient gsmMqttClient(modem, 1);
 }
-extern TinyGsmClient ntripClient;
-#endif
-PubSubClient mqtt(espClient);
+PubSubClient mqtt(wifiMqttClient);
 
 extern Preferences prefs;
 
@@ -29,6 +24,11 @@ namespace {
     static String serverHost;
     return serverHost;
   }
+}
+
+Client& activeMqttClient() {
+  return isWifiConnection() ? static_cast<Client&>(wifiMqttClient)
+                            : static_cast<Client&>(gsmMqttClient);
 }
 
 // ================= ĐỊNH NGHĨA HÀM =================
@@ -63,6 +63,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 }
 
 int setupMQTT() {
+  mqtt.setClient(activeMqttClient());
   prefs.begin("myPrefs", false);
   mqttServerHost() = prefs.getString("MQTT_SERVER", String(MQTT_SERVER));
   uint16_t mqttServerPort = prefs.getUShort("MQTT_PORT", MQTT_PORT);

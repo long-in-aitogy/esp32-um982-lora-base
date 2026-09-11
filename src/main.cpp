@@ -6,14 +6,6 @@
 Preferences prefs;
 
 extern PubSubClient mqtt;
-#if CONNECT_USING_4G && RTCM_COMMUNICATION_PROTOCOL==TCP_IP
-extern TinyGsmClient ntripClient;
-extern TinyGsm modem;
-#endif
-
-#if CONNECT_USING_WIFI && RTCM_COMMUNICATION_PROTOCOL==TCP_IP
-extern WiFiClient ntripClient;
-#endif
 
 #if RTCM_COMMUNICATION_PROTOCOL==LORA_SERIAL
 String rtcmBuffer = ""; // Bộ đệm đọc RTCM từ UM980 để gửi lên Caster qua NTRIP
@@ -41,7 +33,7 @@ SemaphoreHandle_t tcpStreamMutex = nullptr;
 
 void initPrefs();
 static void serviceMqtt(const bool reconnect);
-#if CONNECT_USING_4G && RTCM_COMMUNICATION_PROTOCOL == TCP_IP
+#if RTCM_COMMUNICATION_PROTOCOL == TCP_IP
 static void settleModemBeforeNtrip();
 #endif
 
@@ -85,12 +77,11 @@ void setup()
         Serial.println("[SETUP] Preferences da duoc khoi tao truoc do, khong can khoi tao lai.");
     }
 
+    loadConnectionTypeFromPrefs();
     int gnssTX = prefs.getInt("GNSS_TX", TX_GNSS);
     int gnssRX = prefs.getInt("GNSS_RX", RX_GNSS);
-    #if CONNECT_USING_4G
     int rx2ModemTX = prefs.getInt("RX_TO_MODEM_TX", RX_TO_MODEM_TX);
     int tx2ModemRX = prefs.getInt("TX_TO_MODEM_RX", TX_TO_MODEM_RX);
-    #endif
     prefs.end();
 
     // Khởi tạo giao tiếp với UM980
@@ -114,10 +105,10 @@ void setup()
     bool networkConnected = false;
 
     #ifndef NATIVE_BUILD
-    #if CONNECT_USING_4G
-    SerialAT.begin(115200, SERIAL_8N1, (uint8_t)rx2ModemTX, (uint8_t)tx2ModemRX);
-    delay(500);
-    #endif
+    if (isGsmConnection()) {
+        SerialAT.begin(115200, SERIAL_8N1, (uint8_t)rx2ModemTX, (uint8_t)tx2ModemRX);
+        delay(500);
+    }
     #endif
 
     #if RTCM_COMMUNICATION_PROTOCOL == LORA_SERIAL
@@ -130,27 +121,26 @@ void setup()
     #endif
 
     while (!networkConnected) {
-#if CONNECT_USING_WIFI
-        Serial.println("[SETUP] Su dung ket noi WIFI");
-        networkConnected = setupWiFi();
-#endif
-#if CONNECT_USING_4G
-        Serial.println("[SETUP] Su dung ket noi SIM/GSM");
-        deviceHealth::gsmDisconnectCount = 0;
-        if (startSIM()) {
-            if (connectGSM()) {
-                networkConnected = true;
+        if (isWifiConnection()) {
+            Serial.println("[SETUP] Su dung ket noi WIFI");
+            networkConnected = setupWiFi();
+        } else {
+            Serial.println("[SETUP] Su dung ket noi SIM/GSM");
+            deviceHealth::gsmDisconnectCount = 0;
+            if (startSIM()) {
+                if (connectGSM()) {
+                    networkConnected = true;
+                }
             }
         }
-#endif
         if (networkConnected) {
             Serial.println("[SETUP] Ket noi mang thanh cong!");
             #if RTCM_COMMUNICATION_PROTOCOL == TCP_IP
             setupNTRIP();
             deviceHealth::ntripDisconnectCount = 0;
-            #if CONNECT_USING_4G
-            settleModemBeforeNtrip();
-            #endif
+            if (isGsmConnection()) {
+                settleModemBeforeNtrip();
+            }
             connectNTRIP();
             #endif
             deviceHealth::mqttDisconnectCount = 0;
@@ -256,23 +246,23 @@ __attribute__((noreturn)) void taskNtrip([[maybe_unused]] void* const parameter)
             xSemaphoreGive(rtcmBufferMutex);
         }
 
-        #if CONNECT_USING_4G
-        bool gprsConnected = false;
-        if (xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
-            gprsConnected = modem.isGprsConnected();
-            xSemaphoreGive(tcpStreamMutex);
-        }
-        if (!gprsConnected) {
-            if (++deviceHealth::gsmDisconnectCount >= CONNECTION_FAIL_LIMIT) {
-                Serial.println("[GSM TASK][ERROR] GPRS mat ket noi qua 5 lan, khoi dong lai ESP32...");
-                shutdownTcpTransportBeforeRestart();
-                ESP.restart();
+        if (isGsmConnection()) {
+            bool gprsConnected = false;
+            if (xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
+                gprsConnected = modem.isGprsConnected();
+                xSemaphoreGive(tcpStreamMutex);
             }
-            vTaskDelay(pdMS_TO_TICKS(1000));
-            continue;
+            if (!gprsConnected) {
+                if (++deviceHealth::gsmDisconnectCount >= CONNECTION_FAIL_LIMIT) {
+                    Serial.println("[GSM TASK][ERROR] GPRS mat ket noi qua 5 lan, khoi dong lai ESP32...");
+                    shutdownTcpTransportBeforeRestart();
+                    ESP.restart();
+                }
+                vTaskDelay(pdMS_TO_TICKS(1000));
+                continue;
+            }
+            deviceHealth::gsmDisconnectCount = 0;
         }
-        deviceHealth::gsmDisconnectCount = 0;
-        #endif
         if (xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
             if (loopStatus == 504) {
                 Serial.println("[NTRIP TASK] Dang thu ket noi lai NTRIP...");
@@ -370,12 +360,12 @@ __attribute__((noreturn)) void healthCheckTask([[maybe_unused]] void* const para
         #if RTCM_COMMUNICATION_PROTOCOL == TCP_IP
         if (xSemaphoreTake(rtcmBufferMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS)))
         {
-            #if CONNECT_USING_4G
-            if (xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
-                signalQualityDbm = modem.getSignalQuality();
-                xSemaphoreGive(tcpStreamMutex);
+            if (isGsmConnection()) {
+                if (xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
+                    signalQualityDbm = modem.getSignalQuality();
+                    xSemaphoreGive(tcpStreamMutex);
+                }
             }
-            #endif
             healthPayload = formDeviceHealthString(signalQualityDbm);
             xSemaphoreGive(rtcmBufferMutex);
         }
@@ -440,12 +430,11 @@ __attribute__((noreturn)) void taskMQTT([[maybe_unused]] void* const parameter) 
 }
 
 void loop() {
-    #if CONNECT_USING_4G
-    if (xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
+    if (isGsmConnection() && xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
         if (!modem.isGprsConnected()) {
             digitalWrite(LED_PIN, HIGH);
             Serial.println("[LOOP] GPRS mat ket noi, dang thu ket noi lai...");
-            ntripClient.stop(0);
+            activeNtripClient().stop();
             if (++deviceHealth::gsmDisconnectCount >= CONNECTION_FAIL_LIMIT) {
                 Serial.println("[LOOP][ERROR] GPRS mat ket noi qua 5 lan, khoi dong lai ESP32...");
                 shutdownTcpTransportBeforeRestart();
@@ -458,20 +447,17 @@ void loop() {
         }
         xSemaphoreGive(tcpStreamMutex);
     }
-    #endif
-    #if CONNECT_USING_WIFI
-    if (WiFiClass::status() != WL_CONNECTED) {
+    if (isWifiConnection() && WiFiClass::status() != WL_CONNECTED) {
         digitalWrite(LED_PIN, HIGH);
         Serial.println("[LOOP] WiFi mat ket noi, dang thu ket noi lai...");
         setupWiFi();
         digitalWrite(LED_PIN, LOW);
     }
-    #endif
     // MQTT loop handled in dedicated task `taskMQTT`
     vTaskDelay(pdMS_TO_TICKS(1000)); // loop trống, tất cả logic đã được xử lý trong các task
 }
 
-#if CONNECT_USING_4G && RTCM_COMMUNICATION_PROTOCOL == TCP_IP
+#if RTCM_COMMUNICATION_PROTOCOL == TCP_IP
 static void settleModemBeforeNtrip() {
     Serial.println("[SETUP][NTRIP] Cho modem on dinh truoc khi bat tay NTRIP...");
     const uint32_t settleStart = millis();
@@ -495,12 +481,12 @@ void initPrefs() {
     prefs.putUChar("MODEM_DC_PIN", 15); // chưa cấu hình đc, chưa lấy đc
     prefs.putUChar("MODEM_DTR_PIN", 4); // chưa cấu hình đc, chưa lấy đc
 
-    prefs.putString("CONNECTION_TYPE", "4G"); // cấu hình đc, chưa lấy đc, dự kiến
-    // dự kiến hai loại kết nối: "4G" và "WIFI", mặc định là 4G, nếu muốn dùng WIFI thì phải cấu hình lại
+    prefs.putString("CONNECTION_TYPE", "4G");
+    // Hai giá trị hợp lệ: "4G" và "WIFI". Giá trị này được nạp khi khởi động.
 
     prefs.putString("APN", APN); // cấu hình đc, chưa lấy đc
-    prefs.putString("WIFI_SSID", WIFI_SSID); // cấu hình đc, chưa lấy đc
-    prefs.putString("WIFI_PASS", WIFI_PASSWORD); // cấu hình đc, chưa lấy đc
+    prefs.putString("WIFI_SSID", WIFI_SSID); // cấu hình đc, lấy đc
+    prefs.putString("WIFI_PASS", WIFI_PASSWORD); // cấu hình đc, lấy đc
     prefs.putString("GPRS_USER", ""); // cấu hình đc, chưa lấy đc
     prefs.putString("GPRS_PASS", ""); // cấu hình đc, chưa lấy đc
     prefs.putInt("GNSS_RX", RX_GNSS); // cấu hình được, lấy được

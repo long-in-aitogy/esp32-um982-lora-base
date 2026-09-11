@@ -1,28 +1,21 @@
 #include "helper.h"
 
 extern String latestRtcm;
-#if CONNECT_USING_4G
-extern TinyGsmClient ntripClient;
-#elif CONNECT_USING_WIFI
-extern WiFiClient ntripClient;
-#endif
 
-#if RTCM_COMMUNICATION_PROTOCOL == TCP_IP
 void shutdownTcpTransportBeforeRestart() {
     Serial.println("[SETUP] Dong cac ket noi TCP va GPRS truoc khi khoi dong lai...");
     mqtt.disconnect();
-    ntripClient.stop();
-    #if CONNECT_USING_4G
-    if (modem.isGprsConnected()) {
+#if RTCM_COMMUNICATION_PROTOCOL == TCP_IP
+    activeNtripClient().stop();
+#endif
+    if (isGsmConnection() && modem.isGprsConnected()) {
         modem.gprsDisconnect();
     }
-    #endif
-    #if CONNECT_USING_WIFI
-    WiFi.disconnect();
-    delay(500);
-    #endif
+    if (isWifiConnection()) {
+        WiFi.disconnect();
+        delay(500);
+    }
 }
-#endif
 
 String formDeviceHealthString([[maybe_unused]] int32_t signalQualityDbm)
 {
@@ -30,14 +23,8 @@ String formDeviceHealthString([[maybe_unused]] int32_t signalQualityDbm)
     unsigned long uptime_s = millis() / 1000;
     uint32_t freeHeap = ESP.getFreeHeap();
 
-#if CONNECT_USING_WIFI
-    int32_t rssi = WiFi.RSSI();
-    String connected_via = "WiFi";
-#endif
-#if CONNECT_USING_4G
-    int32_t rssi = signalQualityDbm;
-    String connected_via = "GSM";
-#endif
+    const int32_t rssi = isWifiConnection() ? WiFi.RSSI() : signalQualityDbm;
+    const String connected_via = isWifiConnection() ? "WiFi" : "GSM";
 
     bool mqttOk = isMqttConnected();
 #if RTCM_COMMUNICATION_PROTOCOL == TCP_IP

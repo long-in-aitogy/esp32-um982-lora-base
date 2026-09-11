@@ -149,6 +149,19 @@ cmd_action_t handleEspCommand(const std::vector<String> &cmdWords) {
         return CMD_ACTION_ESP_RESTART;
     }
 
+    if (cmdWords[0] == "SET" && cmd_helper::hasExactArgumentCount(cmdWords, 3, "ESP SET")) {
+        if (cmdWords[1] == "CONNECTION" && cmdWords[2] == "4G") {
+            Serial.println("[MQTT COMMAND DOWNLINK] Lenh yeu cau cau hinh 4G");
+            cmd_helper::saveStringPreference("CONNECTION_TYPE", "4G");
+            return CMD_ACTION_ESP_RESTART;
+        }
+        if (cmdWords[1] == "CONNECTION" && cmdWords[2] == "WIFI") {
+            Serial.println("[MQTT COMMAND DOWNLINK] Lenh yeu cau cau hinh WIFI");
+            cmd_helper::saveStringPreference("CONNECTION_TYPE", "WIFI");
+            return CMD_ACTION_ESP_RESTART;
+        }
+    }
+
     if (cmdWords[0] == "SET" && cmd_helper::hasExactArgumentCount(cmdWords, 4, "ESP SET")) {
         if (cmdWords[1] == "GNSS" && cmdWords[2] == "TX") {
             Serial.println("[MQTT COMMAND DOWNLINK] Lenh yeu cau cau hinh GNSS TX");
@@ -157,14 +170,6 @@ cmd_action_t handleEspCommand(const std::vector<String> &cmdWords) {
         if (cmdWords[1] == "GNSS" && cmdWords[2] == "RX") {
             Serial.println("[MQTT COMMAND DOWNLINK] Lenh yeu cau cau hinh GNSS RX");
             return cmd_helper::saveIntPreference("GNSS_RX", cmdWords[3].toInt());
-        }
-        if (cmdWords[1] == "CONNECTION" && cmdWords[2] == "4G") {
-            Serial.println("[MQTT COMMAND DOWNLINK] Lenh yeu cau cau hinh 4G");
-            return cmd_helper::saveStringPreference("CONNECTION_TYPE", "4G");
-        }
-        if (cmdWords[1] == "CONNECTION" && cmdWords[2] == "WIFI") {
-            Serial.println("[MQTT COMMAND DOWNLINK] Lenh yeu cau cau hinh WIFI");
-            return cmd_helper::saveStringPreference("CONNECTION_TYPE", "WIFI");
         }
         if (cmdWords[1] == "WIFI" && cmdWords[2] == "SSID") {
             Serial.println("[MQTT COMMAND DOWNLINK] Lenh yeu cau cau hinh WIFI SSID");

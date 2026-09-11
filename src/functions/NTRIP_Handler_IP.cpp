@@ -32,19 +32,22 @@ namespace {
 }
 
 // ================= CÁC ĐỐI TƯỢNG KẾT NỐI =================
-#if CONNECT_USING_WIFI
 #include "hardware/Wifi_handler.h"
-WiFiClient ntripClient;
-#endif
-#if CONNECT_USING_4G
 #include "hardware/Sim_handler.h"
 extern TinyGsm modem;
-TinyGsmClient ntripClient(modem, 0);
-#endif
+namespace {
+  WiFiClient wifiNtripClient;
+  TinyGsmClient gsmNtripClient(modem, 0);
+}
 
 extern String latestRtcm;
 extern SemaphoreHandle_t rtcmBufferMutex;
 extern SemaphoreHandle_t tcpStreamMutex;
+
+Client& activeNtripClient() {
+  return isWifiConnection() ? static_cast<Client&>(wifiNtripClient)
+                            : static_cast<Client&>(gsmNtripClient);
+}
 
 // ================= ĐỊNH NGHĨA HÀM =================
 
@@ -249,6 +252,7 @@ bool isNtripConnected() {
 }
 
 int connectNTRIP() { 
+  Client& ntripClient = activeNtripClient();
   prefs.begin("myPrefs", true);
   String ntripAddr = prefs.getString("NTRIP_SERVER", String(NTRIP_CASTER_IP));
   String ntripAuth = prefs.getString("NT_AUTH_BS", String(NTRIP_AUTH_BASE_STATION));
@@ -306,6 +310,7 @@ int connectNTRIP() {
 }
 
 int loopNTRIP(String& rtcmData) {
+  Client& ntripClient = activeNtripClient();
   // không sử dụng tài nguyên chung, không cần mutex
   int returnCode = NTRIP_MODE; // returnCode = NTRIP_MODE + ntripClient.available() * 4
   // 1. Quản lý mất kết nối

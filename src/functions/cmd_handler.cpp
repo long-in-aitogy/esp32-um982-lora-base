@@ -12,7 +12,7 @@ namespace cmd_helper {
         const char *preferenceKey;
     };
 
-    bool hasExactArgumentCount(const std::vector<String> &cmdWords, size_t expectedCount,
+    inline bool hasExactArgumentCount(const std::vector<String> &cmdWords, size_t expectedCount,
                             const char *commandName)
     {
         if (cmdWords.size() == expectedCount) {
@@ -24,7 +24,7 @@ namespace cmd_helper {
         return false;
     }
 
-    cmd_action_t saveStringPreference(const char *key, const String &value)
+    inline cmd_action_t saveStringPreference(const char *key, const String &value)
     {
         prefs.begin("myPrefs", false);
         prefs.putString(key, value);
@@ -32,7 +32,7 @@ namespace cmd_helper {
         return CMD_ACTION_NONE;
     }
 
-    cmd_action_t saveUShortPreference(const char *key, uint16_t value)
+    inline cmd_action_t saveUShortPreference(const char *key, uint16_t value)
     {
         prefs.begin("myPrefs", false);
         prefs.putUShort(key, value);
@@ -40,7 +40,7 @@ namespace cmd_helper {
         return CMD_ACTION_NONE;
     }
 
-    cmd_action_t saveIntPreference(const char *key, int value)
+    inline cmd_action_t saveIntPreference(const char *key, int value)
     {
         prefs.begin("myPrefs", false);
         prefs.putInt(key, value);
@@ -48,7 +48,7 @@ namespace cmd_helper {
         return CMD_ACTION_NONE;
     }
 
-    const char *findPreferenceKey(const String &command,
+    inline const char *findPreferenceKey(const String &command,
                                 const PreferenceMapping *mappings, size_t mappingCount)
     {
         for (size_t i = 0; i < mappingCount; ++i) {
@@ -59,7 +59,7 @@ namespace cmd_helper {
         return nullptr;
     }
 
-    void sendGnssCommands(const UbxCmdBuilder::CommandList &commands)
+    inline void sendGnssCommands(const UbxCmdBuilder::CommandList &commands)
     {
         const UbxCmdBuilder::Command commandBytes = UbxCmdBuilder::commandListToBytes(commands);
         if (!commandBytes.empty()) {
@@ -144,9 +144,22 @@ cmd_action_t handleEspCommand(const std::vector<String> &cmdWords) {
         return CMD_ACTION_NONE;
     }
 
-    if (cmdWords[0] == "AT+RST") {
+    if (cmdWords[0] == "RESTART") {
         Serial.println("[MQTT COMMAND DOWNLINK] Lenh yeu cau khoi dong lai ESP32");
         return CMD_ACTION_ESP_RESTART;
+    }
+
+    if (cmdWords[0] == "SET" && cmd_helper::hasExactArgumentCount(cmdWords, 3, "ESP SET")) {
+        if (cmdWords[1] == "CONNECTION" && cmdWords[2] == "4G") {
+            Serial.println("[MQTT COMMAND DOWNLINK] Lenh yeu cau cau hinh 4G");
+            cmd_helper::saveStringPreference("CONNECTION_TYPE", "4G");
+            return CMD_ACTION_ESP_RESTART;
+        }
+        if (cmdWords[1] == "CONNECTION" && cmdWords[2] == "WIFI") {
+            Serial.println("[MQTT COMMAND DOWNLINK] Lenh yeu cau cau hinh WIFI");
+            cmd_helper::saveStringPreference("CONNECTION_TYPE", "WIFI");
+            return CMD_ACTION_ESP_RESTART;
+        }
     }
 
     if (cmdWords[0] == "SET" && cmd_helper::hasExactArgumentCount(cmdWords, 4, "ESP SET")) {
@@ -157,6 +170,14 @@ cmd_action_t handleEspCommand(const std::vector<String> &cmdWords) {
         if (cmdWords[1] == "GNSS" && cmdWords[2] == "RX") {
             Serial.println("[MQTT COMMAND DOWNLINK] Lenh yeu cau cau hinh GNSS RX");
             return cmd_helper::saveIntPreference("GNSS_RX", cmdWords[3].toInt());
+        }
+        if (cmdWords[1] == "WIFI" && cmdWords[2] == "SSID") {
+            Serial.println("[MQTT COMMAND DOWNLINK] Lenh yeu cau cau hinh WIFI SSID");
+            return cmd_helper::saveStringPreference("WIFI_SSID", cmdWords[3]);
+        }
+        if (cmdWords[1] == "WIFI" && cmdWords[2] == "PASS") {
+            Serial.println("[MQTT COMMAND DOWNLINK] Lenh yeu cau cau hinh WIFI PASS");
+            return cmd_helper::saveStringPreference("WIFI_PASS", cmdWords[3]);
         }
         if (cmdWords[1] == "4G" && cmdWords[2] == "APN") {
             Serial.println("[MQTT COMMAND DOWNLINK] Lenh yeu cau cau hinh 4G APN");

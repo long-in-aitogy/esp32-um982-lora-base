@@ -64,7 +64,7 @@ namespace UbxCmdBuilder
         }
     };
 
-    bool isValidPort(const String &port) { 
+    inline bool isValidPort(const String &port) { 
         return port == "UART1" || port == "UART2" || port == "USB";
     }
 
@@ -79,24 +79,24 @@ namespace UbxCmdBuilder
         return 0;
     }
 
-    void appendU32(Command &data, uint32_t value)
+    inline void appendU32(Command &data, uint32_t value)
     {
         for (uint8_t i = 0; i < 4; ++i)
             data.push_back(static_cast<uint8_t>(value >> (8 * i)));
     }
 
-    void writeU32(Command &data, size_t index, uint32_t value)
+    inline void writeU32(Command &data, size_t index, uint32_t value)
     {
         for (uint8_t i = 0; i < 4; ++i)
             data[index + i] = static_cast<uint8_t>(value >> (8 * i));
     }
 
-    Command asciiCommand(const String &text)
+    inline Command asciiCommand(const String &text)
     {
         return Command(text.begin(), text.end());
     }
 
-    Command delayCommand(uint16_t delayMs) {
+    inline Command delayCommand(uint16_t delayMs) {
         return asciiCommand("$DELAY_" + String(delayMs) + "$");
     }
 
@@ -147,7 +147,7 @@ namespace UbxCmdBuilder
         return ubxPacket(0x06, 0x01, payload);
     }
     
-    bool isDiagnosticNmea(const char *name)
+    inline bool isDiagnosticNmea(const char *name)
     {
         return !strcmp(name, "GGA") || !strcmp(name, "GSA") || !strcmp(name, "GSV") || !strcmp(name, "GST");
     }

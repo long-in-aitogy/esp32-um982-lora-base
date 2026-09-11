@@ -5,6 +5,7 @@
 
 #include <Arduino.h>
 #include "Top_Lvl_Config.h"
+#include "Connection_Type.h"
 
 extern SemaphoreHandle_t rtcmBufferMutex;
 extern SemaphoreHandle_t tcpStreamMutex;
@@ -16,6 +17,8 @@ int setupNTRIP();
 int bootstrapUM980();
 int loopNTRIP(String& rtcmData);
 int connectNTRIP();
-bool isNtripConnected(); // Thêm hàm lấy trạng thái NTRIP
+// Thêm hàm lấy trạng thái NTRIP
+bool isNtripConnected();
+Client& activeNtripClient();
 
 #endif

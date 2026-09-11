@@ -495,28 +495,30 @@ void initPrefs() {
     prefs.putUChar("MODEM_DC_PIN", 15); // chưa cấu hình đc, chưa lấy đc
     prefs.putUChar("MODEM_DTR_PIN", 4); // chưa cấu hình đc, chưa lấy đc
 
-    prefs.putString("CONNECTION_TYPE", "4G"); // chưa cấu hình đc, chưa lấy đc, dự kiến
+    prefs.putString("CONNECTION_TYPE", "4G"); // cấu hình đc, chưa lấy đc, dự kiến
     // dự kiến hai loại kết nối: "4G" và "WIFI", mặc định là 4G, nếu muốn dùng WIFI thì phải cấu hình lại
 
-    prefs.putString("APN", "v-internet"); // cấu hình đc, chưa lấy đc
-    prefs.putString("WIFI_SSID", "AITOGY-VP"); // cấu hình đc, lấy đc
-    prefs.putString("WIFI_PASS", "123456789"); // cấu hình đc, lấy đc
+    prefs.putString("APN", APN); // cấu hình đc, chưa lấy đc
+    prefs.putString("WIFI_SSID", WIFI_SSID); // cấu hình đc, chưa lấy đc
+    prefs.putString("WIFI_PASS", WIFI_PASSWORD); // cấu hình đc, chưa lấy đc
     prefs.putString("GPRS_USER", ""); // cấu hình đc, chưa lấy đc
     prefs.putString("GPRS_PASS", ""); // cấu hình đc, chưa lấy đc
     prefs.putInt("GNSS_RX", RX_GNSS); // cấu hình được, lấy được
     prefs.putInt("GNSS_TX", TX_GNSS); // cấu hình được, lấy được
 
     prefs.putString("NTRIP_SERVER", NTRIP_CASTER_IP); // cấu hình được, lấy được
-    prefs.putUShort("NTRIP_PORT", 2101); // cấu hình được, lấy được
-    prefs.putString("NTRIP_MPT", "/test"); // cấu hình được, lấy được
-    prefs.putString("NT_AUTH_BS", "12345"); // cấu hình được, lấy được
-    prefs.putString("MQTT_SERVER", "aitogy.asia"); // cấu hình được, lấy được
-    prefs.putUShort("MQTT_PORT", 1883); // cấu hình được, lấy được
-    prefs.putString("MQTT_USER", "mqttUser"); // cấu hình đc, lấy được
-    prefs.putString("MQTT_PASS", "MqttPassword123$%^"); // cấu hình đc, lấy được
-    prefs.putString("TPC_SUB_CMD", "tdm2402/um980_base_001/cmd"); // cấu hình được, lấy được
-    prefs.putString("TPC_RAW_RTCM", "tdm2402/um980_base_001/raw/last_rtcm"); // cấu hình đc, lấy được
-    prefs.putString("TPC_HEALTH", "tdm2402/um980_base_001/health"); // cấu hình đc, lấy được
+    prefs.putUShort("NTRIP_PORT", NTRIP_CASTER_PORT); // cấu hình được, lấy được
+    prefs.putString("NTRIP_MPT", NTRIP_MOUNTPOINT); // cấu hình được, lấy được
+    prefs.putString("NT_AUTH_BS", NTRIP_AUTH_BASE_STATION); // cấu hình được, lấy được
+
+    prefs.putString("MQTT_SERVER", MQTT_SERVER); // cấu hình được, lấy được
+    prefs.putUShort("MQTT_PORT", MQTT_PORT); // cấu hình được, lấy được
+    prefs.putString("MQTT_USER", MQTT_USER); // cấu hình đc, lấy được
+    prefs.putString("MQTT_PASS", MQTT_PASS); // cấu hình đc, lấy được
+
+    prefs.putString("TPC_SUB_CMD", TOPIC_SUB_CMD); // cấu hình được, lấy được
+    prefs.putString("TPC_RAW_RTCM", TOPIC_PUB_RAW_RTCM); // cấu hình đc, lấy được
+    prefs.putString("TPC_HEALTH", TOPIC_PUB_HEALTH); // cấu hình đc, lấy được
 }
 
 static void serviceMqtt(const bool reconnect) {

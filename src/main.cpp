@@ -45,6 +45,7 @@ __attribute__((noreturn)) void taskNtrip([[maybe_unused]] void* const parameter)
 #endif
 __attribute__((noreturn)) void healthCheckTask([[maybe_unused]] void* const parameter);
 __attribute__((noreturn)) void taskMQTT([[maybe_unused]] void* const parameter);
+__attribute__((noreturn)) void taskSerialCommand([[maybe_unused]] void* const parameter);
 
 /* ==================SETUP VÀ LOOP======================== */
 
@@ -173,6 +174,10 @@ void setup()
     Serial.println("[SETUP] Task MQTT: Quan ly ket noi MQTT va callback.");
     xTaskCreatePinnedToCore(taskMQTT, "MQTT Task", 4096, nullptr, 3, nullptr, 1);
     Serial.println("[SETUP] Da khoi dong Task MQTT!");
+
+    Serial.println("[SETUP] Task Serial Command: Lang nghe lenh tu Serial moi 500 ms.");
+    xTaskCreatePinnedToCore(taskSerialCommand, "Serial CMD Task", 3072, nullptr, 1, nullptr, 1);
+    Serial.println("[SETUP] Da khoi dong Task Serial Command!");
 
     #if RTCM_COMMUNICATION_PROTOCOL == LORA_SERIAL
     Serial.println("[SETUP] Task LoRa: Truyen du lieu RTCM qua LoRa.");
@@ -426,6 +431,14 @@ __attribute__((noreturn)) void taskMQTT([[maybe_unused]] void* const parameter) 
         // no tcpStreamMutex available, just keep the loop running
         serviceMqtt(false);
         vTaskDelay(pdMS_TO_TICKS(100));
+    }
+}
+
+__attribute__((noreturn)) void taskSerialCommand([[maybe_unused]] void* const parameter) {
+    Serial.println("[SERIAL COMMAND TASK] Bat dau task lang nghe Serial...");
+    while (true) {
+        processPendingSerialCommands();
+        vTaskDelay(pdMS_TO_TICKS(500));
     }
 }
 

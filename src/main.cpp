@@ -494,13 +494,18 @@ void initPrefs() {
     prefs.putUChar("RX_TO_MODEM_TX", 16); // chưa cấu hình được, lấy được
     prefs.putUChar("MODEM_DC_PIN", 15); // chưa cấu hình đc, chưa lấy đc
     prefs.putUChar("MODEM_DTR_PIN", 4); // chưa cấu hình đc, chưa lấy đc
+
+    prefs.putString("CONNECTION_TYPE", "4G"); // chưa cấu hình đc, chưa lấy đc, dự kiến
+    // dự kiến hai loại kết nối: "4G" và "WIFI", mặc định là 4G, nếu muốn dùng WIFI thì phải cấu hình lại
+
     prefs.putString("APN", "v-internet"); // cấu hình đc, chưa lấy đc
-    prefs.putString("GPRS_USER", ""); // cấu hình đc, chưa lấy đc
-    prefs.putString("GPRS_PASS", ""); // cấu hình đc, chưa lấy đc
     prefs.putString("WIFI_SSID", "AITOGY-VP"); // cấu hình đc, lấy đc
     prefs.putString("WIFI_PASS", "123456789"); // cấu hình đc, lấy đc
+    prefs.putString("GPRS_USER", ""); // cấu hình đc, chưa lấy đc
+    prefs.putString("GPRS_PASS", ""); // cấu hình đc, chưa lấy đc
     prefs.putInt("GNSS_RX", RX_GNSS); // cấu hình được, lấy được
     prefs.putInt("GNSS_TX", TX_GNSS); // cấu hình được, lấy được
+
     prefs.putString("NTRIP_SERVER", NTRIP_CASTER_IP); // cấu hình được, lấy được
     prefs.putUShort("NTRIP_PORT", 2101); // cấu hình được, lấy được
     prefs.putString("NTRIP_MPT", "/test"); // cấu hình được, lấy được

@@ -13,9 +13,12 @@ String rtcmBuffer = ""; // Bộ đệm đọc RTCM từ UM980 để gửi lên C
 
 namespace {
     inline constexpr uint8_t CONNECTION_FAIL_LIMIT = 5;
+    inline constexpr uint32_t GNSS_DATA_TIMEOUT_MS = 5000;
 
     struct RtcmState {
         String latest;
+        uint32_t lastGnssReceptionMs = 0;
+        bool hasGnssReception = false;
     };
 
     class deviceHealth {
@@ -187,7 +190,7 @@ void setup()
     Serial.println("[SETUP] Da khoi dong Task LoRa!");
 
     Serial.println("[SETUP] Task RTCM: Doc du lieu RTCM tu UM980.");
-    xTaskCreatePinnedToCore(taskRtcm, "RTCM Task", 4096, nullptr, 2, nullptr, 1);
+    xTaskCreatePinnedToCore(taskRtcm, "RTCM Task", 4096, &rtcmState, 2, nullptr, 1);
     Serial.println("[SETUP] Da khoi dong Task RTCM!");
     #elif RTCM_COMMUNICATION_PROTOCOL == TCP_IP
     Serial.println("[SETUP] Task NTRIP: Gui du lieu RTCM qua NTRIP.");
@@ -214,6 +217,7 @@ void setup()
 #if RTCM_COMMUNICATION_PROTOCOL == LORA_SERIAL
 /* ================= TRIỂN KHAI HÀM TASK ====================== */
 __attribute__((noreturn)) void taskRtcm([[maybe_unused]] void* const parameter) {
+    auto* const rtcmState = static_cast<RtcmState*>(parameter);
     // Sử dụng chung rtcmBuffer với taskLora, cần mutex
     while (true) {
         if (xSemaphoreTake(rtcmBufferMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS)))
@@ -227,6 +231,8 @@ __attribute__((noreturn)) void taskRtcm([[maybe_unused]] void* const parameter) 
 
             rtcmBuffer = receiveRtcmFromGnss();
             if (!rtcmBuffer.isEmpty()) {
+                rtcmState->lastGnssReceptionMs = millis();
+                rtcmState->hasGnssReception = true;
                 Serial.println("[RTCM TASK] Da nhan du lieu RTCM tu mach RTK. So byte: " + String(rtcmBuffer.length()));
             } else {
                 Serial.println("[RTCM TASK] Du lieu RTCM rong.");
@@ -251,6 +257,10 @@ __attribute__((noreturn)) void taskNtrip([[maybe_unused]] void* const parameter)
         if (xSemaphoreTake(rtcmBufferMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS)))
         {
             rtcmState->latest = rtcmRead;
+            if (!rtcmRead.isEmpty()) {
+                rtcmState->lastGnssReceptionMs = millis();
+                rtcmState->hasGnssReception = true;
+            }
             xSemaphoreGive(rtcmBufferMutex);
         }
 
@@ -378,15 +388,19 @@ __attribute__((noreturn)) void healthCheckTask([[maybe_unused]] void* const para
                 }
             }
             latestRtcm = rtcmState->latest;
-            healthPayload = formDeviceHealthString(signalQualityDbm, latestRtcm.length() > 10);
+            const bool gnssDataOk = rtcmState->hasGnssReception
+                && millis() - rtcmState->lastGnssReceptionMs <= GNSS_DATA_TIMEOUT_MS;
+            healthPayload = formDeviceHealthString(signalQualityDbm, gnssDataOk);
             xSemaphoreGive(rtcmBufferMutex);
         }
         #else
             if (xSemaphoreTake(rtcmBufferMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
                 latestRtcm = rtcmState->latest;
+                const bool gnssDataOk = rtcmState->hasGnssReception
+                    && millis() - rtcmState->lastGnssReceptionMs <= GNSS_DATA_TIMEOUT_MS;
                 xSemaphoreGive(rtcmBufferMutex);
+                healthPayload = formDeviceHealthString(signalQualityDbm, gnssDataOk);
             }
-            healthPayload = formDeviceHealthString(signalQualityDbm, latestRtcm.length() > 10);
         #endif
         vTaskDelay(1);
         Serial.print("[HEALTH CHECK] ");

@@ -7,10 +7,12 @@
 
 // ================= ĐỊNH NGHĨA CÁC ĐỐI TƯỢNG CẦN CHO KẾT NỐI =================
 #include "hardware/Wifi_handler.h"
+#include "hardware/Sim_handler.h"
+
 namespace {
   WiFiClient wifiMqttClient;
 }
-#include "hardware/Sim_handler.h"
+
 extern TinyGsm modem;
 namespace {
   TinyGsmClient gsmMqttClient(modem, 1);

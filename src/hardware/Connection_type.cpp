@@ -1,4 +1,4 @@
-#include "Connection_Type.h"
+#include "hardware/Connection_type.h"
 #include "Prog_Config.h"
 
 ConnectionType connectionType = ConnectionType::GSM;

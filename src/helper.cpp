@@ -1,44 +1,37 @@
 #include "helper.h"
 #include "functions/cmd_handler.h"
 
-extern String latestRtcm;
+void SerialCommandProcessor::execute(String command) {
+    command.trim();
+    if (command.isEmpty()) {
+        return;
+    }
 
-namespace {
-    constexpr size_t SERIAL_COMMAND_MAX_LENGTH = 256;
-    String serialCommandBuffer;
-
-    inline void executeSerialCommand(String command) {
-        command.trim();
-        if (command.isEmpty()) {
-            return;
-        }
-
-        Serial.println("[SERIAL COMMAND] " + command);
-        std::vector<String> cmdWords = splitCommand(command);
-        if (handleCommand(cmdWords) == CMD_ACTION_ESP_RESTART) {
-            Serial.println("[SERIAL COMMAND] Yeu cau ESP32 khoi dong lai.");
-            shutdownTcpTransportBeforeRestart();
-            ESP.restart();
-        }
+    Serial.println("[SERIAL COMMAND] " + command);
+    std::vector<String> cmdWords = splitCommand(command);
+    if (handleCommand(cmdWords) == CMD_ACTION_ESP_RESTART) {
+        Serial.println("[SERIAL COMMAND] Yeu cau ESP32 khoi dong lai.");
+        shutdownTcpTransportBeforeRestart();
+        ESP.restart();
     }
 }
 
-void processPendingSerialCommands() {
+void SerialCommandProcessor::processPending() {
     while (Serial.available() > 0) {
-        const char character = static_cast<char>(Serial.read());
+        const auto character = static_cast<char>(Serial.read());
 
         if (character == '\r') {
             continue;
         }
 
         if (character == '\n') {
-            executeSerialCommand(serialCommandBuffer);
-            serialCommandBuffer = "";
+            execute(commandBuffer);
+            commandBuffer = "";
             continue;
         }
 
-        if (serialCommandBuffer.length() < SERIAL_COMMAND_MAX_LENGTH) {
-            serialCommandBuffer += character;
+        if (commandBuffer.length() < MAX_COMMAND_LENGTH) {
+            commandBuffer += character;
         }
     }
 }
@@ -58,7 +51,7 @@ void shutdownTcpTransportBeforeRestart() {
     }
 }
 
-String formDeviceHealthString([[maybe_unused]] int32_t signalQualityDbm)
+String formDeviceHealthString([[maybe_unused]] int32_t signalQualityDbm, const bool gnssDataOk)
 {
     // 1. Lấy các thông số hệ thống
     unsigned long uptime_s = millis() / 1000;
@@ -74,8 +67,6 @@ String formDeviceHealthString([[maybe_unused]] int32_t signalQualityDbm)
     // Nếu dùng LoRa thì không có NTRIP qua TCP/IP, sẽ có cách khác để kiểm tra. Hiện chưa có mã nguồn cho LoRa nên tạm thời để false.
     bool ntripOk = false;
 #endif
-    bool gnssOk = (latestRtcm.length() > 10); // Nếu có chuỗi NMEA hợp lệ
-
     // 2. Đóng gói thành JSON
     std::string healthPayload = "{";
     healthPayload += "\"uptime_s\":" + std::to_string(uptime_s);
@@ -84,7 +75,7 @@ String formDeviceHealthString([[maybe_unused]] int32_t signalQualityDbm)
     healthPayload += ",\"rssi_dbm\":" + std::to_string(rssi);
     healthPayload += ",\"mqtt_ok\":" + std::string(mqttOk ? "true" : "false");
     healthPayload += ",\"ntrip_ok\":" + std::string(ntripOk ? "true" : "false");
-    healthPayload += ",\"gnss_data_ok\":" + std::string(gnssOk ? "true" : "false");
+    healthPayload += ",\"gnss_data_ok\":" + std::string(gnssDataOk ? "true" : "false");
     healthPayload += "}";
     // 3. Trả về payload để có thể log hoặc dùng cho mục đích khác nếu cần
     return String(healthPayload.c_str());

@@ -40,7 +40,6 @@ namespace {
   TinyGsmClient gsmNtripClient(modem, 0);
 }
 
-extern String latestRtcm;
 extern SemaphoreHandle_t rtcmBufferMutex;
 extern SemaphoreHandle_t tcpStreamMutex;
 

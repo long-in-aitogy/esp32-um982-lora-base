@@ -1,43 +1,64 @@
 #include "helper.h"
+#include "functions/cmd_handler.h"
 
-extern String latestRtcm;
-#if CONNECT_USING_4G
-extern TinyGsmClient ntripClient;
-#elif CONNECT_USING_WIFI
-extern WiFiClient ntripClient;
-#endif
+void SerialCommandProcessor::execute(String command) {
+    command.trim();
+    if (command.isEmpty()) {
+        return;
+    }
 
-#if RTCM_COMMUNICATION_PROTOCOL == TCP_IP
+    Serial.println("[SERIAL COMMAND] " + command);
+    std::vector<String> cmdWords = splitCommand(command);
+    if (handleCommand(cmdWords) == CMD_ACTION_ESP_RESTART) {
+        Serial.println("[SERIAL COMMAND] Yeu cau ESP32 khoi dong lai.");
+        shutdownTcpTransportBeforeRestart();
+        ESP.restart();
+    }
+}
+
+void SerialCommandProcessor::processPending() {
+    while (Serial.available() > 0) {
+        const auto character = static_cast<char>(Serial.read());
+
+        if (character == '\r') {
+            continue;
+        }
+
+        if (character == '\n') {
+            execute(commandBuffer);
+            commandBuffer = "";
+            continue;
+        }
+
+        if (commandBuffer.length() < MAX_COMMAND_LENGTH) {
+            commandBuffer += character;
+        }
+    }
+}
+
 void shutdownTcpTransportBeforeRestart() {
     Serial.println("[SETUP] Dong cac ket noi TCP va GPRS truoc khi khoi dong lai...");
     mqtt.disconnect();
-    ntripClient.stop();
-    #if CONNECT_USING_4G
-    if (modem.isGprsConnected()) {
+#if RTCM_COMMUNICATION_PROTOCOL == TCP_IP
+    activeNtripClient().stop();
+#endif
+    if (isGsmConnection() && modem.isGprsConnected()) {
         modem.gprsDisconnect();
     }
-    #endif
-    #if CONNECT_USING_WIFI
-    WiFi.disconnect();
-    delay(500);
-    #endif
+    if (isWifiConnection()) {
+        WiFi.disconnect();
+        delay(500);
+    }
 }
-#endif
 
-String formDeviceHealthString([[maybe_unused]] int32_t signalQualityDbm)
+String formDeviceHealthString([[maybe_unused]] int32_t signalQualityDbm, const bool gnssDataOk)
 {
     // 1. Lấy các thông số hệ thống
     unsigned long uptime_s = millis() / 1000;
     uint32_t freeHeap = ESP.getFreeHeap();
 
-#if CONNECT_USING_WIFI
-    int32_t rssi = WiFi.RSSI();
-    String connected_via = "WiFi";
-#endif
-#if CONNECT_USING_4G
-    int32_t rssi = signalQualityDbm;
-    String connected_via = "GSM";
-#endif
+    const int32_t rssi = isWifiConnection() ? WiFi.RSSI() : signalQualityDbm;
+    const String connected_via = isWifiConnection() ? "WiFi" : "GSM";
 
     bool mqttOk = isMqttConnected();
 #if RTCM_COMMUNICATION_PROTOCOL == TCP_IP
@@ -46,8 +67,6 @@ String formDeviceHealthString([[maybe_unused]] int32_t signalQualityDbm)
     // Nếu dùng LoRa thì không có NTRIP qua TCP/IP, sẽ có cách khác để kiểm tra. Hiện chưa có mã nguồn cho LoRa nên tạm thời để false.
     bool ntripOk = false;
 #endif
-    bool gnssOk = (latestRtcm.length() > 10); // Nếu có chuỗi NMEA hợp lệ
-
     // 2. Đóng gói thành JSON
     std::string healthPayload = "{";
     healthPayload += "\"uptime_s\":" + std::to_string(uptime_s);
@@ -56,7 +75,7 @@ String formDeviceHealthString([[maybe_unused]] int32_t signalQualityDbm)
     healthPayload += ",\"rssi_dbm\":" + std::to_string(rssi);
     healthPayload += ",\"mqtt_ok\":" + std::string(mqttOk ? "true" : "false");
     healthPayload += ",\"ntrip_ok\":" + std::string(ntripOk ? "true" : "false");
-    healthPayload += ",\"gnss_data_ok\":" + std::string(gnssOk ? "true" : "false");
+    healthPayload += ",\"gnss_data_ok\":" + std::string(gnssDataOk ? "true" : "false");
     healthPayload += "}";
     // 3. Trả về payload để có thể log hoặc dùng cho mục đích khác nếu cần
     return String(healthPayload.c_str());

@@ -1,8 +1,3 @@
-#include "Top_Lvl_Config.h"
-
-#if CONNECT_USING_4G
-#define GSM_CODE
-
 #include "Prog_Config.h"
 #include "hardware/Sim_handler.h"
 
@@ -55,7 +50,6 @@ bool startSIM() {
     delay(3000);
     return true;
 }
-
 bool connectGSM() {
     uint8_t retries = 0;
     while (retries <= 5) {
@@ -105,5 +99,3 @@ bool connectGSM() {
     SerialMon.println("[GSM] Ket noi mang GSM that bai sau " + String(retries) + " lan thu. Ket thuc ket noi !");
     return false;
 }
-
-#endif // GSM_CODE

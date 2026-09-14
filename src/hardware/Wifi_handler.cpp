@@ -1,15 +1,15 @@
-#include "Top_Lvl_Config.h"
-
-#if CONNECT_USING_WIFI
-#define WIFI_CODE
-
 #include "Prog_Config.h"
 #include "hardware/Wifi_handler.h"
 
 bool setupWiFi() {
+  prefs.begin("myPrefs", false);
+  String ssid = prefs.getString("WIFI_SSID", "AITOGY-VP");
+  String password = prefs.getString("WIFI_PASS", "123456789");
+  prefs.end();
+
   Serial.print("\n[WIFI] Dang ket noi mang: ");
-  Serial.println(WIFI_SSID);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  Serial.println(ssid);
+  WiFi.begin(ssid.c_str(), password.c_str());
 
   int attempt = 0;
   while (WiFiClass::status() != WL_CONNECTED) {
@@ -23,5 +23,3 @@ bool setupWiFi() {
   Serial.println("\n[WIFI] Ket noi THANH CONG! IP: " + WiFi.localIP().toString());
   return true;
 }
-
-#endif // WIFI_CODE

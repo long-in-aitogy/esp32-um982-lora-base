@@ -59,7 +59,7 @@ Các lệnh này cấu hình module GNSS ở chế độ base và được gửi
 
 | Cú pháp | Giải thích |
 | --- | --- |
-| `ATG ESP AT+RST` | Khởi động lại ESP32 ngay lập tức. |
+| `ATG ESP RESTART` | Khởi động lại ESP32 ngay lập tức. |
 | `ATG ESP SET GNSS TX <GPIO>` | Lưu chân GPIO truyền UART từ ESP32 đến GNSS. Ví dụ: `ATG ESP SET GNSS TX 17`. |
 | `ATG ESP SET GNSS RX <GPIO>` | Lưu chân GPIO nhận UART từ GNSS về ESP32. Ví dụ: `ATG ESP SET GNSS RX 16`. |
 | `ATG ESP SET 4G APN <apn>` | Lưu APN của nhà mạng 4G. Ví dụ: `ATG ESP SET 4G APN v-internet`. |

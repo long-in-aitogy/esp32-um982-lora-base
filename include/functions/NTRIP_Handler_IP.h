@@ -5,10 +5,10 @@
 
 #include <Arduino.h>
 #include "Top_Lvl_Config.h"
+#include "hardware/Connection_type.h"
 
 extern SemaphoreHandle_t rtcmBufferMutex;
 extern SemaphoreHandle_t tcpStreamMutex;
-extern String latestRtcm; // Biến toàn cục để lưu dữ liệu RTCM mới nhất từ NTRIP
 
 // =============== KHAI BÁO HÀM =================
 
@@ -16,6 +16,8 @@ int setupNTRIP();
 int bootstrapUM980();
 int loopNTRIP(String& rtcmData);
 int connectNTRIP();
-bool isNtripConnected(); // Thêm hàm lấy trạng thái NTRIP
+// Thêm hàm lấy trạng thái NTRIP
+bool isNtripConnected();
+Client& activeNtripClient();
 
 #endif

@@ -84,9 +84,9 @@ Firmware dành cho vi điều khiển ESP32 (ví dụ board TDM2402) đóng vai 
 Các cấu hình sau có thể được sửa trong file `Top_Lvl_Config.h` hoặc đưa vào dưới dạng tham số biên dịch trong `platformio.ini` (`-D<MACRO>[=<VALUE>]`).
 - `WIFI_LORA_32_V4`: Định nghĩa loại cấu hình phần cứng (ví dụ Heltec V4).
 - `LORAWAN_DEBUG_LEVEL`: Mức độ debug cho thư viện LoRaWAN từ 0 đến 2 (0 = tắt debug, 1 = cơ bản, 2 = chi tiết).
-- `CONNECT_USING_WIFI`: Kết nối mạng bằng WiFi (0 = tắt, 1 = bật).
-- `CONNECT_USING_4G`: Kết nối mạng bằng 4G (0 = tắt, 1 = bật). Nếu cấu hình này và `CONNECT_USING_WIFI` đều được bật, báo lỗi. Nếu cùng tắt, chọn WiFi.
 - `RTCM_COMMUNICATION_PROTOCOL`: Chồng giao thức truyền dữ liệu cải chính NTRIP (0 = qua TCP/IP stack, 1 = qua LoRa).
+
+Phương thức kết nối mạng được chọn lúc khởi động từ Preferences `CONNECTION_TYPE`: `WIFI` hoặc `4G` (mặc định `4G`). Lệnh MQTT cấu hình `CONNECTION` sẽ khởi động lại thiết bị để áp dụng giá trị mới.
 
 ### Cấu hình hoạt động MẶC ĐỊNH:
 Các cấu hình sau được khai báo dưới dạng hằng số inline trong `include/Prog_Config.h` và có thể được sửa trực tiếp trong file này:

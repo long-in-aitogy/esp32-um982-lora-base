@@ -28,12 +28,11 @@ inline constexpr int GNSS_BAUD = 115200;
 inline constexpr int MUTEX_TIMEOUT_MS = 1500; // Thời gian tối đa để chờ mutex (ms)
 
 // ================= CẤU HÌNH KẾT NỐI =================
-#if CONNECT_USING_WIFI
-inline constexpr char WIFI_SSID[] = "AITOGY";
-inline constexpr char WIFI_PASSWORD[] = "aitogy@aitogy";
-#endif
 
-#if CONNECT_USING_4G
+inline constexpr char WIFI_SSID[] = "AITOGY-VP";
+inline constexpr char WIFI_PASSWORD[] = "123456789";
+
+
 inline constexpr uint8_t TX_TO_MODEM_RX = 17;
 inline constexpr uint8_t RX_TO_MODEM_TX = 16;
 inline constexpr uint8_t MODEM_DC_PIN = 15;
@@ -42,7 +41,6 @@ inline constexpr uint8_t MODEM_DTR_PIN = 4;
 inline constexpr char APN[] = "v-internet"; // Thay bằng APN của nhà mạng bạn
 inline constexpr char GPRS_USER[] = "";     // Thường để trống
 inline constexpr char GPRS_PASS[] = "";
-#endif
 
 // ================ CẤU HÌNH LORA =================
 #if RTCM_COMMUNICATION_PROTOCOL == LORA_SERIAL

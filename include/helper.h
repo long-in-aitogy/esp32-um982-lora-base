@@ -20,9 +20,20 @@
 // ================= ĐỊNH NGHĨA CÁC BIẾN TOÀN CỤC =================
 extern TinyGsm modem;
 
+class SerialCommandProcessor {
+public:
+	void processPending();
+
+private:
+	static constexpr size_t MAX_COMMAND_LENGTH = 256;
+
+	void execute(String command);
+
+	String commandBuffer;
+};
+
 // ================= ĐỊNH NGHĨA CÁC HÀM =================
 String formDeviceHealthString(int32_t signalQualityDbm, bool gnssDataOk);
-void processPendingSerialCommands();
 
 void shutdownTcpTransportBeforeRestart();
 

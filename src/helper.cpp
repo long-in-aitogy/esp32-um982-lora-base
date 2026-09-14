@@ -1,27 +1,22 @@
 #include "helper.h"
 #include "functions/cmd_handler.h"
 
-namespace {
-    constexpr size_t SERIAL_COMMAND_MAX_LENGTH = 256;
-    String serialCommandBuffer;
+void SerialCommandProcessor::execute(String command) {
+    command.trim();
+    if (command.isEmpty()) {
+        return;
+    }
 
-    inline void executeSerialCommand(String command) {
-        command.trim();
-        if (command.isEmpty()) {
-            return;
-        }
-
-        Serial.println("[SERIAL COMMAND] " + command);
-        std::vector<String> cmdWords = splitCommand(command);
-        if (handleCommand(cmdWords) == CMD_ACTION_ESP_RESTART) {
-            Serial.println("[SERIAL COMMAND] Yeu cau ESP32 khoi dong lai.");
-            shutdownTcpTransportBeforeRestart();
-            ESP.restart();
-        }
+    Serial.println("[SERIAL COMMAND] " + command);
+    std::vector<String> cmdWords = splitCommand(command);
+    if (handleCommand(cmdWords) == CMD_ACTION_ESP_RESTART) {
+        Serial.println("[SERIAL COMMAND] Yeu cau ESP32 khoi dong lai.");
+        shutdownTcpTransportBeforeRestart();
+        ESP.restart();
     }
 }
 
-void processPendingSerialCommands() {
+void SerialCommandProcessor::processPending() {
     while (Serial.available() > 0) {
         const auto character = static_cast<char>(Serial.read());
 
@@ -30,13 +25,13 @@ void processPendingSerialCommands() {
         }
 
         if (character == '\n') {
-            executeSerialCommand(serialCommandBuffer);
-            serialCommandBuffer = "";
+            execute(commandBuffer);
+            commandBuffer = "";
             continue;
         }
 
-        if (serialCommandBuffer.length() < SERIAL_COMMAND_MAX_LENGTH) {
-            serialCommandBuffer += character;
+        if (commandBuffer.length() < MAX_COMMAND_LENGTH) {
+            commandBuffer += character;
         }
     }
 }

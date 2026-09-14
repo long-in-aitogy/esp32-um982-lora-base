@@ -446,9 +446,10 @@ __attribute__((noreturn)) void taskMQTT([[maybe_unused]] void* const parameter) 
 }
 
 __attribute__((noreturn)) void taskSerialCommand([[maybe_unused]] void* const parameter) {
+    SerialCommandProcessor commandProcessor;
     Serial.println("[SERIAL COMMAND TASK] Bat dau task lang nghe Serial...");
     while (true) {
-        processPendingSerialCommands();
+        commandProcessor.processPending();
         vTaskDelay(pdMS_TO_TICKS(500));
     }
 }

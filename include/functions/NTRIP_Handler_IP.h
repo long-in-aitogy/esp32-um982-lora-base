@@ -5,11 +5,10 @@
 
 #include <Arduino.h>
 #include "Top_Lvl_Config.h"
-#include "Connection_Type.h"
+#include "hardware/Connection_type.h"
 
 extern SemaphoreHandle_t rtcmBufferMutex;
 extern SemaphoreHandle_t tcpStreamMutex;
-extern String latestRtcm; // Biến toàn cục để lưu dữ liệu RTCM mới nhất từ NTRIP
 
 // =============== KHAI BÁO HÀM =================
 

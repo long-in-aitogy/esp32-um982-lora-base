@@ -6,7 +6,7 @@
 #include <Arduino.h>
 #include <PubSubClient.h>
 #include "Top_Lvl_Config.h"
-#include "Connection_Type.h"
+#include "hardware/Connection_type.h"
 
 extern PubSubClient mqtt;
 extern SemaphoreHandle_t tcpStreamMutex;

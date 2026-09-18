@@ -10,12 +10,7 @@
 #include "hardware/Sim_handler.h"
 #include "functions/MQTT_Manager.h"
 
-#if RTCM_COMMUNICATION_PROTOCOL == TCP_IP
 #include "functions/NTRIP_Handler_IP.h"
-#else
-#include "hardware/Lora_handler.h"
-#include "functions/RTCM_Receiver.h"
-#endif
 
 // ================= ĐỊNH NGHĨA CÁC BIẾN TOÀN CỤC =================
 extern TinyGsm modem;

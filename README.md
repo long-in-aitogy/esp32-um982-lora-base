@@ -11,14 +11,13 @@ Firmware dành cho vi điều khiển ESP32 (ví dụ board TDM2402) đóng vai 
 
 ## Yêu cầu môi trường và thiết bị
 - Môi trường phát triển: PlatformIO IDE hoặc bất kỳ IDE nào hỗ trợ PlatformIO.
-- Bảng mạch được hỗ trợ: esp32dev (TDM240x series), Heltec WiFi LoRa 32 V4 (có thể chỉnh trong `platformio.ini`).
+- Bảng mạch được hỗ trợ: esp32dev (TDM240x series) và các board ESP32 tương thích với cấu hình hiện có trong `platformio.ini`.
 - Module GNSS: Unicore UM980 hoặc UM982 (kết nối qua UART).
 - Các thư viện được sử dụng:
     - `Arduino` cho lập trình cơ bản trên ESP32.
     - `PubSubClient` cho MQTT.
     - `WiFi` cho kết nối mạng WiFi.
     - `TinyGSM` cho kết nối mạng 4G (nếu sử dụng modem 4G).
-    - `LoRaWANHeltec ESP32 Dev-Boards` cung cấp các thư viện LoRa nếu sử dụng Heltec V4, bao gồm thư viện `LoRaWan_APP`.
     - `ArduinoJson` để xử lý JSON.
 
 ## Tổ chức mã nguồn:
@@ -61,10 +60,9 @@ Firmware dành cho vi điều khiển ESP32 (ví dụ board TDM2402) đóng vai 
 |    |  ├── MQTT_Manager.cpp                     # Hàm xử lý kết nối và gửi dữ liệu qua MQTT
 |    |  ├── NTRIP_Handler_IP.cpp                 # Hàm xử lý kết nối và nhận dữ liệu từ NTRIP Caster qua IP
 |    |  └── NMEA_Parser.cpp                      # Hàm xử lý phân tích chuỗi NMEA
-|    └──hardware/                       # Thư mục con chứa các hàm liên quan đến phần cứng (wifi, 4g, lora)
+|    └──hardware/                       # Thư mục con chứa các hàm liên quan đến phần cứng (wifi, 4g)
 |       ├── WiFi_handler.cpp                     # Hàm xử lý kết nối WiFi
-|       ├── Sim_handler.cpp                      # Hàm xử lý kết nối 4G
-|       └── LoRa_handler.cpp                     # Hàm xử lý kết nối LoRa
+|       └── Sim_handler.cpp                      # Hàm xử lý kết nối 4G
 |
 ├──test/                            # Thư mục dành cho việc viết unit test
 |                                  và sử dụng PlatformIO Test Runner.
@@ -83,8 +81,7 @@ Firmware dành cho vi điều khiển ESP32 (ví dụ board TDM2402) đóng vai 
 ### Cấu hình cấp cao trước khi biên dịch, được lưu trong `include/Top_Lvl_Config.h`:
 Các cấu hình sau có thể được sửa trong file `Top_Lvl_Config.h` hoặc đưa vào dưới dạng tham số biên dịch trong `platformio.ini` (`-D<MACRO>[=<VALUE>]`).
 - `WIFI_LORA_32_V4`: Định nghĩa loại cấu hình phần cứng (ví dụ Heltec V4).
-- `LORAWAN_DEBUG_LEVEL`: Mức độ debug cho thư viện LoRaWAN từ 0 đến 2 (0 = tắt debug, 1 = cơ bản, 2 = chi tiết).
-- `RTCM_COMMUNICATION_PROTOCOL`: Chồng giao thức truyền dữ liệu cải chính NTRIP (0 = qua TCP/IP stack, 1 = qua LoRa).
+- `RTCM_COMMUNICATION_PROTOCOL`: Chồng giao thức truyền dữ liệu cải chính NTRIP, hiện chỉ hỗ trợ qua TCP/IP stack.
 
 Phương thức kết nối mạng được chọn lúc khởi động từ Preferences `CONNECTION_TYPE`: `WIFI` hoặc `4G` (mặc định `4G`). Lệnh MQTT cấu hình `CONNECTION` sẽ khởi động lại thiết bị để áp dụng giá trị mới.
 

@@ -61,12 +61,7 @@ String formDeviceHealthString([[maybe_unused]] int32_t signalQualityDbm, const b
     const String connected_via = isWifiConnection() ? "WiFi" : "GSM";
 
     bool mqttOk = isMqttConnected();
-#if RTCM_COMMUNICATION_PROTOCOL == TCP_IP
     bool ntripOk = isNtripConnected();
-#else
-    // Nếu dùng LoRa thì không có NTRIP qua TCP/IP, sẽ có cách khác để kiểm tra. Hiện chưa có mã nguồn cho LoRa nên tạm thời để false.
-    bool ntripOk = false;
-#endif
     // 2. Đóng gói thành JSON
     std::string healthPayload = "{";
     healthPayload += "\"uptime_s\":" + std::to_string(uptime_s);

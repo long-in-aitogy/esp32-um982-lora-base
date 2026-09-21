@@ -51,7 +51,8 @@ void shutdownTcpTransportBeforeRestart() {
     }
 }
 
-String formDeviceHealthString([[maybe_unused]] int32_t signalQualityDbm, const bool gnssDataOk)
+String formDeviceHealthString([[maybe_unused]] int32_t signalQualityDbm, const bool gnssDataOk,
+                              const uint16_t rtcmMessageTypeMask)
 {
     // 1. Lấy các thông số hệ thống
     unsigned long uptime_s = millis() / 1000;
@@ -62,6 +63,10 @@ String formDeviceHealthString([[maybe_unused]] int32_t signalQualityDbm, const b
 
     bool mqttOk = isMqttConnected();
     bool ntripOk = isNtripConnected();
+    constexpr uint16_t supportedRtcmTypes[] = {
+        1005, 1074, 1077, 1084, 1087,
+        1094, 1097, 1124, 1127, 1230,
+    };
     // 2. Đóng gói thành JSON
     std::string healthPayload = "{";
     healthPayload += "\"uptime_s\":" + std::to_string(uptime_s);
@@ -71,6 +76,18 @@ String formDeviceHealthString([[maybe_unused]] int32_t signalQualityDbm, const b
     healthPayload += ",\"mqtt_ok\":" + std::string(mqttOk ? "true" : "false");
     healthPayload += ",\"ntrip_ok\":" + std::string(ntripOk ? "true" : "false");
     healthPayload += ",\"gnss_data_ok\":" + std::string(gnssDataOk ? "true" : "false");
+    healthPayload += ",\"rtcm_types\":[";
+    bool firstRtcmType = true;
+    for (size_t i = 0; i < sizeof(supportedRtcmTypes) / sizeof(supportedRtcmTypes[0]); ++i) {
+        if ((rtcmMessageTypeMask & (1U << i)) != 0) {
+            if (!firstRtcmType) {
+                healthPayload += ",";
+            }
+            healthPayload += std::to_string(supportedRtcmTypes[i]);
+            firstRtcmType = false;
+        }
+    }
+    healthPayload += "]";
     healthPayload += "}";
     // 3. Trả về payload để có thể log hoặc dùng cho mục đích khác nếu cần
     return String(healthPayload.c_str());

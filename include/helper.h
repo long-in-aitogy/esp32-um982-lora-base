@@ -28,7 +28,8 @@ private:
 };
 
 // ================= ĐỊNH NGHĨA CÁC HÀM =================
-String formDeviceHealthString(int32_t signalQualityDbm, bool gnssDataOk);
+String formDeviceHealthString(int32_t signalQualityDbm, bool gnssDataOk,
+							  uint16_t rtcmMessageTypeMask);
 
 void shutdownTcpTransportBeforeRestart();
 

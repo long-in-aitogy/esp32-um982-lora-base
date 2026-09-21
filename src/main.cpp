@@ -15,6 +15,7 @@ namespace {
         String latest;
         uint32_t lastGnssReceptionMs = 0;
         bool hasGnssReception = false;
+        uint16_t messageTypeMask = 0;
     };
 
     class deviceHealth {
@@ -196,6 +197,7 @@ __attribute__((noreturn)) void taskNtrip([[maybe_unused]] void* const parameter)
         if (xSemaphoreTake(rtcmBufferMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS)))
         {
             rtcmState->latest = rtcmRead;
+            rtcmState->messageTypeMask = getRtcmMessageTypeMask();
             if (!rtcmRead.isEmpty()) {
                 rtcmState->lastGnssReceptionMs = millis();
                 rtcmState->hasGnssReception = true;
@@ -267,7 +269,8 @@ __attribute__((noreturn)) void healthCheckTask([[maybe_unused]] void* const para
             latestRtcm = rtcmState->latest;
             const bool gnssDataOk = rtcmState->hasGnssReception
                 && millis() - rtcmState->lastGnssReceptionMs <= GNSS_DATA_TIMEOUT_MS;
-            healthPayload = formDeviceHealthString(signalQualityDbm, gnssDataOk);
+            healthPayload = formDeviceHealthString(signalQualityDbm, gnssDataOk,
+                                                   rtcmState->messageTypeMask);
             xSemaphoreGive(rtcmBufferMutex);
         }
         #else
@@ -275,8 +278,10 @@ __attribute__((noreturn)) void healthCheckTask([[maybe_unused]] void* const para
                 latestRtcm = rtcmState->latest;
                 const bool gnssDataOk = rtcmState->hasGnssReception
                     && millis() - rtcmState->lastGnssReceptionMs <= GNSS_DATA_TIMEOUT_MS;
+                const uint16_t messageTypeMask = rtcmState->messageTypeMask;
                 xSemaphoreGive(rtcmBufferMutex);
-                healthPayload = formDeviceHealthString(signalQualityDbm, gnssDataOk);
+                healthPayload = formDeviceHealthString(signalQualityDbm, gnssDataOk,
+                                                       messageTypeMask);
             }
         #endif
         vTaskDelay(1);

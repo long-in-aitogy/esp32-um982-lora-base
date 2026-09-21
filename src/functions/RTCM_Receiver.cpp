@@ -5,15 +5,26 @@ String receiveRtcmFromGnss() {
     #ifdef PROGRAM_TEST
     String rtcmData = "THIS IS NOT A REAL RTCM DATA. THIS IS A TEST STRING FOR UNIT TESTING PURPOSES.";
     #else
-    String rtcmData = "";
+    String rtcmData;
+    uint8_t buf[128];
+
     while (Serial1.available() > 0) {
-        int nextByte = Serial1.read();
-        if (nextByte < 0) {
+        const size_t bytesAvailable = static_cast<size_t>(Serial1.available());
+        const size_t bytesToRead = min(bytesAvailable, sizeof(buf));
+
+        if (bytesToRead == 0) {
             break;
         }
-        rtcmData += static_cast<char>(nextByte);
+
+        const size_t bytesRead = Serial1.readBytes(reinterpret_cast<char*>(buf), bytesToRead);
+        if (bytesRead == 0) {
+            break;
+        }
+
+        rtcmData.concat(reinterpret_cast<char*>(buf), bytesRead);
     }
     #endif
+
     if (!rtcmData.isEmpty()) {
         Serial.println("[UM980] Da nhan du lieu RTCM tu mach RTK. So byte: " + String(rtcmData.length()));
         #if PROGRAM_DEBUG

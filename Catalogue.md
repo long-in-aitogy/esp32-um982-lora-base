@@ -92,7 +92,6 @@ Các lệnh này cấu hình module GNSS ở chế độ base và được gửi
 | `ATG MQTT SET USER <tên_người_dùng>` | Lưu tên người dùng đăng nhập MQTT. |
 | `ATG MQTT SET PASS <mật_khẩu>` | Lưu mật khẩu đăng nhập MQTT. |
 | `ATG MQTT SET PUBTPCHEALTH <topic>` | Lưu topic publish dữ liệu health check. Ví dụ: `ATG MQTT SET PUBTPCHEALTH tdm2402/node-01/health`. |
-| `ATG MQTT SET PUBTPCRAW <topic>` | Lưu topic publish dữ liệu RTCM thô. Ví dụ: `ATG MQTT SET PUBTPCRAW tdm2402/node-01/raw/rtcm`. |
 | `ATG MQTT SET SUBTPCCMD <topic>` | Lưu topic subscribe để nhận lệnh MQTT. Ví dụ: `ATG MQTT SET SUBTPCCMD tdm2402/node-01/cmd`. |
 
 ### NTRIP

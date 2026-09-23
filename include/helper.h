@@ -29,7 +29,7 @@ private:
 
 // ================= ĐỊNH NGHĨA CÁC HÀM =================
 String formDeviceHealthString(int32_t signalQualityDbm, bool gnssDataOk,
-							  uint16_t rtcmMessageTypeMask);
+							  const uint32_t *rtcmMessageCounts);
 
 void shutdownTcpTransportBeforeRestart();
 

@@ -11,14 +11,13 @@ Firmware dành cho vi điều khiển ESP32 (ví dụ board TDM2402) đóng vai 
 
 ## Yêu cầu môi trường và thiết bị
 - Môi trường phát triển: PlatformIO IDE hoặc bất kỳ IDE nào hỗ trợ PlatformIO.
-- Bảng mạch được hỗ trợ: esp32dev (TDM240x series), Heltec WiFi LoRa 32 V4 (có thể chỉnh trong `platformio.ini`).
+- Bảng mạch được hỗ trợ: esp32dev (TDM240x series) và các board ESP32 tương thích với cấu hình hiện có trong `platformio.ini`.
 - Module GNSS: Unicore UM980 hoặc UM982 (kết nối qua UART).
 - Các thư viện được sử dụng:
     - `Arduino` cho lập trình cơ bản trên ESP32.
     - `PubSubClient` cho MQTT.
     - `WiFi` cho kết nối mạng WiFi.
     - `TinyGSM` cho kết nối mạng 4G (nếu sử dụng modem 4G).
-    - `LoRaWANHeltec ESP32 Dev-Boards` cung cấp các thư viện LoRa nếu sử dụng Heltec V4, bao gồm thư viện `LoRaWan_APP`.
     - `ArduinoJson` để xử lý JSON.
 
 ## Tổ chức mã nguồn:
@@ -61,10 +60,9 @@ Firmware dành cho vi điều khiển ESP32 (ví dụ board TDM2402) đóng vai 
 |    |  ├── MQTT_Manager.cpp                     # Hàm xử lý kết nối và gửi dữ liệu qua MQTT
 |    |  ├── NTRIP_Handler_IP.cpp                 # Hàm xử lý kết nối và nhận dữ liệu từ NTRIP Caster qua IP
 |    |  └── NMEA_Parser.cpp                      # Hàm xử lý phân tích chuỗi NMEA
-|    └──hardware/                       # Thư mục con chứa các hàm liên quan đến phần cứng (wifi, 4g, lora)
+|    └──hardware/                       # Thư mục con chứa các hàm liên quan đến phần cứng (wifi, 4g)
 |       ├── WiFi_handler.cpp                     # Hàm xử lý kết nối WiFi
-|       ├── Sim_handler.cpp                      # Hàm xử lý kết nối 4G
-|       └── LoRa_handler.cpp                     # Hàm xử lý kết nối LoRa
+|       └── Sim_handler.cpp                      # Hàm xử lý kết nối 4G
 |
 ├──test/                            # Thư mục dành cho việc viết unit test
 |                                  và sử dụng PlatformIO Test Runner.
@@ -83,8 +81,7 @@ Firmware dành cho vi điều khiển ESP32 (ví dụ board TDM2402) đóng vai 
 ### Cấu hình cấp cao trước khi biên dịch, được lưu trong `include/Top_Lvl_Config.h`:
 Các cấu hình sau có thể được sửa trong file `Top_Lvl_Config.h` hoặc đưa vào dưới dạng tham số biên dịch trong `platformio.ini` (`-D<MACRO>[=<VALUE>]`).
 - `WIFI_LORA_32_V4`: Định nghĩa loại cấu hình phần cứng (ví dụ Heltec V4).
-- `LORAWAN_DEBUG_LEVEL`: Mức độ debug cho thư viện LoRaWAN từ 0 đến 2 (0 = tắt debug, 1 = cơ bản, 2 = chi tiết).
-- `RTCM_COMMUNICATION_PROTOCOL`: Chồng giao thức truyền dữ liệu cải chính NTRIP (0 = qua TCP/IP stack, 1 = qua LoRa).
+- `RTCM_COMMUNICATION_PROTOCOL`: Chồng giao thức truyền dữ liệu cải chính NTRIP, hiện chỉ hỗ trợ qua TCP/IP stack.
 
 Phương thức kết nối mạng được chọn lúc khởi động từ Preferences `CONNECTION_TYPE`: `WIFI` hoặc `4G` (mặc định `4G`). Lệnh MQTT cấu hình `CONNECTION` sẽ khởi động lại thiết bị để áp dụng giá trị mới.
 
@@ -101,9 +98,9 @@ Các cấu hình sau được khai báo dưới dạng hằng số inline trong 
 
 Ở trên là các cấu hình mặc định, nếu không thể đọc cấu hình từ bộ nhớ flash được triển khai bằng Preferences (NVS), chương trình sẽ sử dụng các giá trị mặc định này. Các cấu hình này có thể được thay đổi bằng cách gửi lệnh qua MQTT (xem phần dưới).
 
-## Gửi lệnh qua MQTT:
+## Gửi lệnh qua MQTT hoặc Serial Monitor:
 
-Thiết bị nhận nội dung (payload) từ topic lệnh MQTT đã cấu hình. Mỗi lệnh phải bắt đầu bằng `ATG`; các thành phần được ngăn cách bằng khoảng trắng. Từ khóa phân biệt chữ hoa/chữ thường. Giá trị không được chứa khoảng trắng (ví dụ mật khẩu có khoảng trắng hiện chưa được hỗ trợ).
+Thiết bị nhận nội dung (payload) từ Serial (nếu kết nối serial với máy tính hoặc điện thoại) hoặc qua topic lệnh MQTT đã cấu hình. Mỗi lệnh phải bắt đầu bằng `ATG`; các thành phần được ngăn cách bằng khoảng trắng. Từ khóa phân biệt chữ hoa/chữ thường. Giá trị không được chứa khoảng trắng (ví dụ mật khẩu có khoảng trắng hiện chưa được hỗ trợ).
 
 ### Cấu trúc chung
 
@@ -132,9 +129,13 @@ Các lệnh này cấu hình module GNSS ở chế độ base và được gửi
 
 | Cú pháp | Giải thích |
 | --- | --- |
-| `ATG ESP AT+RST` | Khởi động lại ESP32 ngay lập tức. |
+| `ATG ESP RESTART` | Khởi động lại ESP32 ngay lập tức. |
+| `ATG ESP SET CONNECTION 4G` | Chuyển phương thức kết nối mạng sang 4G và khởi động lại ESP32 để áp dụng. |
+| `ATG ESP SET CONNECTION WIFI` | Chuyển phương thức kết nối mạng sang Wi-Fi và khởi động lại ESP32 để áp dụng. |
 | `ATG ESP SET GNSS TX <GPIO>` | Lưu chân GPIO truyền UART từ ESP32 đến GNSS. Ví dụ: `ATG ESP SET GNSS TX 17`. |
 | `ATG ESP SET GNSS RX <GPIO>` | Lưu chân GPIO nhận UART từ GNSS về ESP32. Ví dụ: `ATG ESP SET GNSS RX 16`. |
+| `ATG ESP SET WIFI SSID <ssid>` | Lưu tên mạng Wi-Fi cần kết nối. |
+| `ATG ESP SET WIFI PASS <mật_khẩu>` | Lưu mật khẩu mạng Wi-Fi. |
 | `ATG ESP SET 4G APN <apn>` | Lưu APN của nhà mạng 4G. Ví dụ: `ATG ESP SET 4G APN v-internet`. |
 | `ATG ESP SET 4G USER <tên_người_dùng>` | Lưu tên người dùng APN 4G. Ví dụ: `ATG ESP SET 4G USER user`. |
 | `ATG ESP SET 4G PASS <mật_khẩu>` | Lưu mật khẩu APN 4G. Ví dụ: `ATG ESP SET 4G PASS password`. |

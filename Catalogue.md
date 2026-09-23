@@ -14,7 +14,8 @@ Tùy theo điều kiện mạng, ESP32 sẽ mất khoảng 15 đến 20 giây đ
     "rssi_dbm": "-77",
     "mqtt_ok": true,
     "ntrip_ok": true,
-    "gnss_data_ok": true
+    "gnss_data_ok": true,
+    "rtcm_types": [1005, 1074, 1077]
 }
 ```
 
@@ -27,6 +28,7 @@ Tùy theo điều kiện mạng, ESP32 sẽ mất khoảng 15 đến 20 giây đ
 - `mqtt_ok`: trạng thái kết nối MQTT, `true` nếu đang kết nối, `false` nếu không.
 - `ntrip_ok`: trạng thái kết nối NTRIP, `true` nếu đang kết nối, `false` nếu không.
 - `gnss_data_ok`: trạng thái dữ liệu GNSS, `true` nếu đang nhận dữ liệu RTCM từ module GNSS, `false` nếu không.
+- `rtcm_types`: mảng các loại bản tin RTCM được phát hiện trong khoảng 30 giây gần nhất, tương ứng với một chu kỳ health check. Firmware hiện theo dõi các loại `1005`, `1074`, `1077`, `1084`, `1087`, `1094`, `1097`, `1124`, `1127` và `1230`. Mảng rỗng nếu không phát hiện loại nào trong chu kỳ hiện tại.
 
 ## Gửi lệnh qua MQTT hoặc Serial Monitor:
 
@@ -60,8 +62,12 @@ Các lệnh này cấu hình module GNSS ở chế độ base và được gửi
 | Cú pháp | Giải thích |
 | --- | --- |
 | `ATG ESP RESTART` | Khởi động lại ESP32 ngay lập tức. |
+| `ATG ESP SET CONNECTION 4G` | Chuyển phương thức kết nối mạng sang 4G và khởi động lại ESP32 để áp dụng. |
+| `ATG ESP SET CONNECTION WIFI` | Chuyển phương thức kết nối mạng sang Wi-Fi và khởi động lại ESP32 để áp dụng. |
 | `ATG ESP SET GNSS TX <GPIO>` | Lưu chân GPIO truyền UART từ ESP32 đến GNSS. Ví dụ: `ATG ESP SET GNSS TX 17`. |
 | `ATG ESP SET GNSS RX <GPIO>` | Lưu chân GPIO nhận UART từ GNSS về ESP32. Ví dụ: `ATG ESP SET GNSS RX 16`. |
+| `ATG ESP SET WIFI SSID <ssid>` | Lưu tên mạng Wi-Fi cần kết nối. |
+| `ATG ESP SET WIFI PASS <mật_khẩu>` | Lưu mật khẩu mạng Wi-Fi. |
 | `ATG ESP SET 4G APN <apn>` | Lưu APN của nhà mạng 4G. Ví dụ: `ATG ESP SET 4G APN v-internet`. |
 | `ATG ESP SET 4G USER <tên_người_dùng>` | Lưu tên người dùng APN 4G. Ví dụ: `ATG ESP SET 4G USER user`. |
 | `ATG ESP SET 4G PASS <mật_khẩu>` | Lưu mật khẩu APN 4G. Ví dụ: `ATG ESP SET 4G PASS password`. |

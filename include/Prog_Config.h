@@ -42,26 +42,6 @@ inline constexpr char APN[] = "v-internet"; // Thay bằng APN của nhà mạng
 inline constexpr char GPRS_USER[] = "";     // Thường để trống
 inline constexpr char GPRS_PASS[] = "";
 
-// ================ CẤU HÌNH LORA =================
-#if RTCM_COMMUNICATION_PROTOCOL == LORA_SERIAL
-inline constexpr int RF_FREQUENCY = 433000000; // Hz
-inline constexpr int TX_OUTPUT_POWER = 24;        // dBm
-inline constexpr int LORA_BANDWIDTH = 0;         // [0: 125 kHz,
-                                                              //  1: 250 kHz,
-                                                              //  2: 500 kHz,
-                                                              //  3: Reserved]
-inline constexpr int LORA_SPREADING_FACTOR = 11;         // [SF7..SF12]
-inline constexpr int LORA_CODINGRATE = 1;         // [1: 4/5,
-                                                              //  2: 4/6,
-                                                              //  3: 4/7,
-                                                              //  4: 4/8]
-inline constexpr int LORA_PREAMBLE_LENGTH = 8;         // Same for Tx and Rx
-inline constexpr int LORA_SYMBOL_TIMEOUT = 0;         // Symbols
-inline constexpr bool LORA_FIX_LENGTH_PAYLOAD_ON = false;
-inline constexpr bool LORA_IQ_INVERSION_ON = false;
-inline constexpr int LORA_TX_TIMEOUT = 3000;         // ms
-#endif
-
 // ================= CẤU HÌNH NTRIP =================
 inline constexpr int NTRIP_MODE = 1; // 1: Chỉ gửi GGA khi có yêu cầu; 2: Gửi GGA mỗi khi có thay đổi; 3: Gửi GGA đều đặn mỗi 10s
 

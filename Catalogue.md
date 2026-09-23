@@ -1,5 +1,21 @@
 # Hướng dẫn sử dụng thiết bị Base GNSS qua 4G
 
+## Cấu hình mặc định
+
+Đây là cấu hình mặc định của thiết bị khi xuất xưởng. Người dùng có thể thay đổi các thông số này bằng cách gửi lệnh qua Serial Monitor hoặc qua MQTT.
+
+- Kết nối mạng: 4G (có thể chuyển sang Wi-Fi bằng lệnh `ATG ESP SET CONNECTION WIFI`)
+- MQTT broker: `aitogy.asia`, cổng `1883`
+- MQTT topic để ESP publish health check: `tdm2402/um980_base_001/health`
+- MQTT topic được ESP subscribe để nhận lệnh: `tdm2402/um980_base_001/cmd`
+- NTRIP caster: `aitogy.com.vn`, cổng `2101`
+- Mountpoint: `/test`
+
+- Nối chân cắm UART từ ESP32 đến module GNSS:
+
+  - IO18 (ESP32) → RX/RX1/MOSI (GNSS)
+  - IO19 (ESP32) ← TX/TX1/MISO (GNSS)
+
 ## Quá trình hoạt động
 
 Tùy theo điều kiện mạng, ESP32 sẽ mất khoảng 15 đến 20 giây để khởi động, kết nối mạng 4G, đăng nhập MQTT broker và NTRIP caster. Khi kết nối và đăng nhập thành công, ESP32 sẽ lấy dữ liệu RTCM từ module GNSS và gửi lên NTRIP caster, đồng thời gửi một bản sao của bản tin này lên một topic MQTT.
@@ -75,8 +91,8 @@ Các lệnh này cấu hình module GNSS ở chế độ base và được gửi
 | `ATG ESP RESTART` | Khởi động lại ESP32 ngay lập tức. |
 | `ATG ESP SET CONNECTION 4G` | Chuyển phương thức kết nối mạng sang 4G và khởi động lại ESP32 để áp dụng. |
 | `ATG ESP SET CONNECTION WIFI` | Chuyển phương thức kết nối mạng sang Wi-Fi và khởi động lại ESP32 để áp dụng. |
-| `ATG ESP SET GNSS TX <GPIO>` | Lưu chân GPIO truyền UART từ ESP32 đến GNSS. Ví dụ: `ATG ESP SET GNSS TX 17`. |
-| `ATG ESP SET GNSS RX <GPIO>` | Lưu chân GPIO nhận UART từ GNSS về ESP32. Ví dụ: `ATG ESP SET GNSS RX 16`. |
+| `ATG ESP SET GNSS TX <GPIO>` | Lưu chân GPIO truyền UART từ ESP32 đến GNSS. Ví dụ: `ATG ESP SET GNSS TX 17`. Không nên tự ý thay đổi cấu hình này, trừ khi là bên lập trình, sản xuất thiết bị. |
+| `ATG ESP SET GNSS RX <GPIO>` | Lưu chân GPIO nhận UART từ GNSS về ESP32. Ví dụ: `ATG ESP SET GNSS RX 16`. Không nên tự ý thay đổi cấu hình này, trừ khi là bên lập trình, sản xuất thiết bị. |
 | `ATG ESP SET WIFI SSID <ssid>` | Lưu tên mạng Wi-Fi cần kết nối. |
 | `ATG ESP SET WIFI PASS <mật_khẩu>` | Lưu mật khẩu mạng Wi-Fi. |
 | `ATG ESP SET 4G APN <apn>` | Lưu APN của nhà mạng 4G. Ví dụ: `ATG ESP SET 4G APN v-internet`. |

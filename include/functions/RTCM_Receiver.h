@@ -6,6 +6,6 @@
 #include "WString.h"
 
 String receiveRtcmFromGnss();
-uint16_t getRtcmMessageTypeMask();
+uint16_t consumeRtcmMessageTypeMask();
 
 #endif

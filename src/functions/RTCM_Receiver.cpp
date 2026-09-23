@@ -113,6 +113,8 @@ String receiveRtcmFromGnss() {
     return rtcmData;
 }
 
-uint16_t getRtcmMessageTypeMask() {
-    return rtcmMessageTypeMask & RTCM_TYPE_MASK;
+uint16_t consumeRtcmMessageTypeMask() {
+    const uint16_t messageTypeMask = rtcmMessageTypeMask & RTCM_TYPE_MASK;
+    rtcmMessageTypeMask = 0;
+    return messageTypeMask;
 }

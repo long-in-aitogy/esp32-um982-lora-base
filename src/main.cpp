@@ -15,6 +15,7 @@ namespace {
         String latest;
         uint32_t lastGnssReceptionMs = 0;
         bool hasGnssReception = false;
+        uint16_t messageTypeMask = 0;
     };
 
     class deviceHealth {
@@ -196,6 +197,7 @@ __attribute__((noreturn)) void taskNtrip([[maybe_unused]] void* const parameter)
         if (xSemaphoreTake(rtcmBufferMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS)))
         {
             rtcmState->latest = rtcmRead;
+            rtcmState->messageTypeMask |= consumeRtcmMessageTypeMask();
             if (!rtcmRead.isEmpty()) {
                 rtcmState->lastGnssReceptionMs = millis();
                 rtcmState->hasGnssReception = true;
@@ -246,7 +248,7 @@ __attribute__((noreturn)) void taskNtrip([[maybe_unused]] void* const parameter)
     }
 }
 __attribute__((noreturn)) void healthCheckTask([[maybe_unused]] void* const parameter) {
-    auto const* const rtcmState = static_cast<RtcmState*>(parameter);
+    auto* const rtcmState = static_cast<RtcmState*>(parameter);
     // Có tranh chấp tài nguyên với task RTCM và NTRIP publish
     String healthPayload = "";
     uint32_t loopStartTime = 0;
@@ -267,7 +269,10 @@ __attribute__((noreturn)) void healthCheckTask([[maybe_unused]] void* const para
             latestRtcm = rtcmState->latest;
             const bool gnssDataOk = rtcmState->hasGnssReception
                 && millis() - rtcmState->lastGnssReceptionMs <= GNSS_DATA_TIMEOUT_MS;
-            healthPayload = formDeviceHealthString(signalQualityDbm, gnssDataOk);
+            const uint16_t messageTypeMask = rtcmState->messageTypeMask;
+            rtcmState->messageTypeMask = 0;
+            healthPayload = formDeviceHealthString(signalQualityDbm, gnssDataOk,
+                                                   messageTypeMask);
             xSemaphoreGive(rtcmBufferMutex);
         }
         #else
@@ -275,8 +280,11 @@ __attribute__((noreturn)) void healthCheckTask([[maybe_unused]] void* const para
                 latestRtcm = rtcmState->latest;
                 const bool gnssDataOk = rtcmState->hasGnssReception
                     && millis() - rtcmState->lastGnssReceptionMs <= GNSS_DATA_TIMEOUT_MS;
+                const uint16_t messageTypeMask = rtcmState->messageTypeMask;
+                rtcmState->messageTypeMask = 0;
                 xSemaphoreGive(rtcmBufferMutex);
-                healthPayload = formDeviceHealthString(signalQualityDbm, gnssDataOk);
+                healthPayload = formDeviceHealthString(signalQualityDbm, gnssDataOk,
+                                                       messageTypeMask);
             }
         #endif
         vTaskDelay(1);

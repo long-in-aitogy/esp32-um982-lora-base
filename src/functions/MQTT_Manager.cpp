@@ -66,6 +66,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
 int setupMQTT() {
   mqtt.setClient(activeMqttClient());
+  mqtt.setBufferSize(512);
   prefs.begin("myPrefs", false);
   mqttServerHost() = prefs.getString("MQTT_SERVER", String(MQTT_SERVER));
   uint16_t mqttServerPort = prefs.getUShort("MQTT_PORT", MQTT_PORT);
@@ -98,35 +99,6 @@ int connectMQTT() {
   return 0;
 }
 
-int publishRaw(const String& payload) {
-  if (payload.isEmpty()) return -1;
-
-  // Wait for MQTT connection (timeout after 5s)
-  const uint32_t start = millis();
-  while (!mqtt.connected()) {
-    vTaskDelay(pdMS_TO_TICKS(100));
-    if (millis() - start > 5000) {
-      Serial.println("[MQTT] publishRaw: MQTT not connected, aborting publish");
-      return -1;
-    }
-  }
-
-  // Take tcpStreamMutex before publishing to avoid concurrent network ops
-  if (tcpStreamMutex != nullptr && xSemaphoreTake(tcpStreamMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
-    prefs.begin("myPrefs", false);
-    String topicPubRaw = prefs.getString("TPC_RAW_RTCM", String(TOPIC_PUB_RAW_RTCM));
-    prefs.end();
-    bool ok = mqtt.publish(topicPubRaw.c_str(), payload.c_str());
-    xSemaphoreGive(tcpStreamMutex);
-    if (ok) {
-      Serial.println("[UM982 GNSS RAW CORRECTION DATA] Da publish thanh cong !");
-      return 0;
-    }
-    return -1;
-  }
-  return -1;
-}
-
 int publishHealth(const String& payload) {
   if (payload.isEmpty()) return -1;
 
@@ -154,8 +126,14 @@ int publishHealth(const String& payload) {
       #endif
       return 0;
     }
+    #if PROGRAM_DEBUG
+    Serial.println("[MQTT] publishHealth that bai, kich thuoc payload: " + String(payload.length()));
+    #endif
     return -1;
   }
+  #if PROGRAM_DEBUG
+  Serial.println("[MQTT] publishHealth: khong lay duoc tcpStreamMutex");
+  #endif
   return -1;
 }
 

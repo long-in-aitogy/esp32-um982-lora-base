@@ -202,7 +202,7 @@ cmd_action_t handleMqttCommand(const std::vector<String> &cmdWords) {
         static constexpr cmd_helper::PreferenceMapping stringSettings[] = {
             {"SERVER", "MQTT_SERVER"}, {"USER", "MQTT_USER"},
             {"PASS", "MQTT_PASS"}, {"PUBTPCHEALTH", "TPC_HEALTH"},
-            {"PUBTPCRAW", "TPC_RAW_RTCM"}, {"SUBTPCCMD", "TPC_SUB_CMD"},
+            {"SUBTPCCMD", "TPC_SUB_CMD"},
         };
         const char *key = cmd_helper::findPreferenceKey(cmdWords[1], stringSettings,
                                             sizeof(stringSettings) / sizeof(stringSettings[0]));

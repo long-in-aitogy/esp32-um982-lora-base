@@ -3,9 +3,7 @@
 
 namespace {
     constexpr uint32_t CRC24Q_POLYNOMIAL = 0x1864CFB;
-    constexpr uint16_t RTCM_TYPE_MASK = 0x03FF;
-
-    uint16_t rtcmMessageTypeMask = 0;
+    uint32_t rtcmMessageTypeCounts[RTCM_SUPPORTED_MESSAGE_TYPE_COUNT] = {};
     String rtcmParserBuffer;
 
     uint32_t crc24q(const uint8_t *data, size_t length) {
@@ -65,7 +63,7 @@ namespace {
                     (static_cast<uint16_t>(frame[3]) << 4) | (frame[4] >> 4);
                 const int bit = messageTypeBit(messageType);
                 if (bit >= 0) {
-                    rtcmMessageTypeMask |= static_cast<uint16_t>(1U << bit);
+                    ++rtcmMessageTypeCounts[bit];
                 }
             }
             rtcmParserBuffer.remove(0, frameLength);
@@ -113,8 +111,11 @@ String receiveRtcmFromGnss() {
     return rtcmData;
 }
 
-uint16_t consumeRtcmMessageTypeMask() {
-    const uint16_t messageTypeMask = rtcmMessageTypeMask & RTCM_TYPE_MASK;
-    rtcmMessageTypeMask = 0;
-    return messageTypeMask;
+RtcmMessageCounts consumeRtcmMessageCounts() {
+    RtcmMessageCounts messageCounts;
+    for (size_t i = 0; i < RTCM_SUPPORTED_MESSAGE_TYPE_COUNT; ++i) {
+        messageCounts.values[i] = rtcmMessageTypeCounts[i];
+        rtcmMessageTypeCounts[i] = 0;
+    }
+    return messageCounts;
 }

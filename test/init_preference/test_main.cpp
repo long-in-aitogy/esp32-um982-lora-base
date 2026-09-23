@@ -35,7 +35,6 @@ void setup() {
     prefs.putString("MQTT_USER", "mqttUser");
     prefs.putString("MQTT_PASS", "MqttPassword123$%^");
     prefs.putString("TOPIC_SUB_CMD", "tdm2402/um980_base_001/cmd");
-    prefs.putString("TOPIC_PUB_RAW_RTCM", "tdm2402/um980_base_001/raw/last_rtcm");
     prefs.putString("TOPIC_PUB_HEALTH", "tdm2402/um980_base_001/health");
 }
 

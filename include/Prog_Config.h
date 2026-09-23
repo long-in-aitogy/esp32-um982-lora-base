@@ -69,7 +69,6 @@ inline constexpr char MQTT_USER[] = "mqttUser";
 inline constexpr char MQTT_PASS[] = "MqttPassword123$%^";
 
 inline constexpr char TOPIC_SUB_CMD[] = "tdm2402/um980_base_001/cmd";
-inline constexpr char TOPIC_PUB_RAW_RTCM[] = "tdm2402/um980_base_001/raw/last_rtcm";
 inline constexpr char TOPIC_PUB_HEALTH[] = "tdm2402/um980_base_001/health";
 
 // ================= CẤU HÌNH KIỂM TRA SỨC KHOẺ =================

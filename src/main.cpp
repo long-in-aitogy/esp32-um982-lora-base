@@ -15,7 +15,7 @@ namespace {
         String latest;
         uint32_t lastGnssReceptionMs = 0;
         bool hasGnssReception = false;
-        uint16_t messageTypeMask = 0;
+        RtcmMessageCounts messageCounts;
     };
 
     class deviceHealth {
@@ -197,7 +197,10 @@ __attribute__((noreturn)) void taskNtrip([[maybe_unused]] void* const parameter)
         if (xSemaphoreTake(rtcmBufferMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS)))
         {
             rtcmState->latest = rtcmRead;
-            rtcmState->messageTypeMask |= consumeRtcmMessageTypeMask();
+            const RtcmMessageCounts receivedCounts = consumeRtcmMessageCounts();
+            for (size_t i = 0; i < RTCM_SUPPORTED_MESSAGE_TYPE_COUNT; ++i) {
+                rtcmState->messageCounts.values[i] += receivedCounts.values[i];
+            }
             if (!rtcmRead.isEmpty()) {
                 rtcmState->lastGnssReceptionMs = millis();
                 rtcmState->hasGnssReception = true;
@@ -253,7 +256,6 @@ __attribute__((noreturn)) void healthCheckTask([[maybe_unused]] void* const para
     String healthPayload = "";
     uint32_t loopStartTime = 0;
     uint32_t remainingWait = 0;
-    String latestRtcm;
     while (true) {
         loopStartTime = millis();
         int32_t signalQualityDbm = -1;
@@ -266,25 +268,23 @@ __attribute__((noreturn)) void healthCheckTask([[maybe_unused]] void* const para
                     xSemaphoreGive(tcpStreamMutex);
                 }
             }
-            latestRtcm = rtcmState->latest;
             const bool gnssDataOk = rtcmState->hasGnssReception
                 && millis() - rtcmState->lastGnssReceptionMs <= GNSS_DATA_TIMEOUT_MS;
-            const uint16_t messageTypeMask = rtcmState->messageTypeMask;
-            rtcmState->messageTypeMask = 0;
+            const RtcmMessageCounts messageCounts = rtcmState->messageCounts;
+            rtcmState->messageCounts = {};
             healthPayload = formDeviceHealthString(signalQualityDbm, gnssDataOk,
-                                                   messageTypeMask);
+                                                   messageCounts.values);
             xSemaphoreGive(rtcmBufferMutex);
         }
         #else
             if (xSemaphoreTake(rtcmBufferMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS))) {
-                latestRtcm = rtcmState->latest;
                 const bool gnssDataOk = rtcmState->hasGnssReception
                     && millis() - rtcmState->lastGnssReceptionMs <= GNSS_DATA_TIMEOUT_MS;
-                const uint16_t messageTypeMask = rtcmState->messageTypeMask;
-                rtcmState->messageTypeMask = 0;
+                const RtcmMessageCounts messageCounts = rtcmState->messageCounts;
+                rtcmState->messageCounts = {};
                 xSemaphoreGive(rtcmBufferMutex);
                 healthPayload = formDeviceHealthString(signalQualityDbm, gnssDataOk,
-                                                       messageTypeMask);
+                                                       messageCounts.values);
             }
         #endif
         vTaskDelay(1);
@@ -306,15 +306,8 @@ __attribute__((noreturn)) void healthCheckTask([[maybe_unused]] void* const para
         Serial.println("[HEALTH CHECK] Kiem tra ket noi MQTT de gui thong tin suc khoe...");
         #endif
 
-        // Publish health and any latest RTCM via thread-safe helpers.
-        // The helpers will wait for MQTT connection and take the tcpStreamMutex.
+        // The helper waits for MQTT connection and takes the tcpStreamMutex.
         publishHealth(healthPayload);
-        if (!latestRtcm.isEmpty()) {
-            #if PROGRAM_DEBUG
-            Serial.println("[GNSS PUBLISH] Dang gui du lieu NMEA len MQTT...");
-            #endif
-            publishRaw(latestRtcm); // publishRaw accepts String&
-        }
         vTaskDelay(1);
         if (HEALTH_INTERVAL > (millis() - loopStartTime)) {
             remainingWait = HEALTH_INTERVAL - (millis() - loopStartTime);
@@ -427,7 +420,6 @@ void initPrefs() {
     prefs.putString("MQTT_PASS", MQTT_PASS); // cấu hình đc, lấy được
 
     prefs.putString("TPC_SUB_CMD", TOPIC_SUB_CMD); // cấu hình được, lấy được
-    prefs.putString("TPC_RAW_RTCM", TOPIC_PUB_RAW_RTCM); // cấu hình đc, lấy được
     prefs.putString("TPC_HEALTH", TOPIC_PUB_HEALTH); // cấu hình đc, lấy được
 }
 

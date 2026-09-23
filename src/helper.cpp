@@ -52,7 +52,7 @@ void shutdownTcpTransportBeforeRestart() {
 }
 
 String formDeviceHealthString([[maybe_unused]] int32_t signalQualityDbm, const bool gnssDataOk,
-                              const uint16_t rtcmMessageTypeMask)
+                              const uint32_t *rtcmMessageCounts)
 {
     // 1. Lấy các thông số hệ thống
     unsigned long uptime_s = millis() / 1000;
@@ -76,18 +76,15 @@ String formDeviceHealthString([[maybe_unused]] int32_t signalQualityDbm, const b
     healthPayload += ",\"mqtt_ok\":" + std::string(mqttOk ? "true" : "false");
     healthPayload += ",\"ntrip_ok\":" + std::string(ntripOk ? "true" : "false");
     healthPayload += ",\"gnss_data_ok\":" + std::string(gnssDataOk ? "true" : "false");
-    healthPayload += ",\"rtcm_types\":[";
-    bool firstRtcmType = true;
+    healthPayload += ",\"rtcm_types\":{";
     for (size_t i = 0; i < sizeof(supportedRtcmTypes) / sizeof(supportedRtcmTypes[0]); ++i) {
-        if ((rtcmMessageTypeMask & (1U << i)) != 0) {
-            if (!firstRtcmType) {
-                healthPayload += ",";
-            }
-            healthPayload += std::to_string(supportedRtcmTypes[i]);
-            firstRtcmType = false;
+        if (i > 0) {
+            healthPayload += ",";
         }
+        healthPayload += "\"" + std::to_string(supportedRtcmTypes[i]) + "\":";
+        healthPayload += std::to_string(rtcmMessageCounts[i]);
     }
-    healthPayload += "]";
+    healthPayload += "}";
     healthPayload += "}";
     // 3. Trả về payload để có thể log hoặc dùng cho mục đích khác nếu cần
     return String(healthPayload.c_str());

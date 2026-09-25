@@ -1,4 +1,20 @@
-# Hướng dẫn sử dụng thiết bị Base GNSS qua 4G
+# Hướng dẫn sử dụng thiết bị Base GNSS qua 4G và Wi-Fi AITOGY-BASE-ESP
+
+Tên thiết bị: AITOGY-GNSS-BASE-ESP
+
+Hai mẫu chính của loại này:
+- AITOGY-GNSS-BASE-ESP-UBX
+- AITOGY-GNSS-BASE-ESP-UM980
+
+## Các loại thiết bị được sử dụng:
+
+- Module TDM2402:
+    - Chip ESP32-WROOM-32E (Xử lý chính, kết nối WiFi)
+    - Chip SIMCOM A7600C (Kết nối 4G)
+
+- Module GNSS (Nhận dữ liệu GNSS, xuất dữ liệu RTCM qua UART):
+    - Unicore UM980 (với mẫu AITOGY-BASESP-UM)
+    - Hoặc U-Blox ZED F6P (với mẫu AITOGY-BASESP-UBX)
 
 ## Cấu hình mặc định
 
@@ -57,9 +73,9 @@ Tùy theo điều kiện mạng, ESP32 sẽ mất khoảng 15 đến 20 giây đ
 - `gnss_data_ok`: trạng thái dữ liệu GNSS, `true` nếu đang nhận dữ liệu RTCM từ module GNSS, `false` nếu không.
 - `rtcm_types`: object chứa số lần xuất hiện của từng loại bản tin RTCM trong khoảng 30 giây gần nhất, tương ứng với một chu kỳ health check. Firmware hiện theo dõi các loại `1005`, `1074`, `1077`, `1084`, `1087`, `1094`, `1097`, `1124`, `1127` và `1230`. Giá trị bằng `0` nếu loại bản tin không xuất hiện trong chu kỳ hiện tại.
 
-## Gửi lệnh qua MQTT hoặc Serial Monitor:
+## Cấu hình lên ESP32:
 
-Thiết bị nhận nội dung (payload) từ Serial (nếu kết nối serial với máy tính hoặc điện thoại) hoặc qua topic lệnh MQTT đã cấu hình. Mỗi lệnh phải bắt đầu bằng `ATG`; các thành phần được ngăn cách bằng khoảng trắng. Từ khóa phân biệt chữ hoa/chữ thường. Giá trị không được chứa khoảng trắng (ví dụ mật khẩu có khoảng trắng hiện chưa được hỗ trợ).
+ESP32 nhận nội dung (payload) từ Serial (nếu kết nối serial với máy tính hoặc điện thoại) hoặc qua topic lệnh MQTT đã cấu hình. Mỗi lệnh phải bắt đầu bằng `ATG`; các thành phần được ngăn cách bằng khoảng trắng. Từ khóa phân biệt chữ hoa/chữ thường. Giá trị không được chứa khoảng trắng (ví dụ mật khẩu có khoảng trắng hiện chưa được hỗ trợ).
 
 ### Cấu trúc chung
 
@@ -75,7 +91,7 @@ Trong đó:
 
 Các lệnh `SET` lưu giá trị vào bộ nhớ Preferences (NVS) của ESP32. Khi thay đổi thông số kết nối đang hoạt động, nên khởi động lại thiết bị để các kết nối được tạo lại với cấu hình mới.
 
-### GNSS
+### Cấu hình liên quan tới GNSS
 
 Các lệnh này cấu hình module GNSS ở chế độ base và được gửi qua UART đến module.
 
@@ -84,7 +100,7 @@ Các lệnh này cấu hình module GNSS ở chế độ base và được gửi
 | `ATG GNSS BASE SURVEY_IN <thời_gian> <độ_chính_xác>` | Bật chế độ khảo sát vị trí base. `<thời_gian>` là thời gian khảo sát tối thiểu, tính bằng giây; `<độ_chính_xác>` là ngưỡng độ chính xác, tính bằng mét. Ví dụ: `ATG GNSS BASE SURVEY_IN 300 1.0`. |
 | `ATG GNSS BASE FIXED <vĩ_độ> <kinh_độ> <độ_cao> <độ_chính_xác>` | Cấu hình vị trí base cố định theo LLA. Vĩ độ và kinh độ ở đơn vị độ thập phân, độ cao và độ chính xác ở mét. Ví dụ: `ATG GNSS BASE FIXED 10.7769 106.7009 12.5 0.5`. |
 
-### ESP
+### Cấu hình liên quan tới chính module ESP
 
 | Cú pháp | Giải thích |
 | --- | --- |
@@ -99,7 +115,7 @@ Các lệnh này cấu hình module GNSS ở chế độ base và được gửi
 | `ATG ESP SET 4G USER <tên_người_dùng>` | Lưu tên người dùng APN 4G. Ví dụ: `ATG ESP SET 4G USER user`. |
 | `ATG ESP SET 4G PASS <mật_khẩu>` | Lưu mật khẩu APN 4G. Ví dụ: `ATG ESP SET 4G PASS password`. |
 
-### MQTT
+### Cấu hình liên quan tới MQTT
 
 | Cú pháp | Giải thích |
 | --- | --- |
@@ -110,7 +126,7 @@ Các lệnh này cấu hình module GNSS ở chế độ base và được gửi
 | `ATG MQTT SET PUBTPCHEALTH <topic>` | Lưu topic publish dữ liệu health check. Ví dụ: `ATG MQTT SET PUBTPCHEALTH tdm2402/node-01/health`. |
 | `ATG MQTT SET SUBTPCCMD <topic>` | Lưu topic subscribe để nhận lệnh MQTT. Ví dụ: `ATG MQTT SET SUBTPCCMD tdm2402/node-01/cmd`. |
 
-### NTRIP
+### Cấu hình liên quan tới NTRIP
 
 | Cú pháp | Giải thích |
 | --- | --- |
@@ -119,10 +135,21 @@ Các lệnh này cấu hình module GNSS ở chế độ base và được gửi
 | `ATG NTRIP SET MNTPNT <mountpoint>` | Lưu mountpoint cần kết nối. Ví dụ: `ATG NTRIP SET MNTPNT VRS_RTCM32`. |
 | `ATG NTRIP SET CSTRAUTH <chuỗi_xác_thực>` | Lưu chuỗi xác thực NTRIP theo định dạng base64. Giá trị này thường là base64 của `username:password`. |
 
-### Cấu hình hệ thống
+### Cấu hình toàn hệ thống
 
 | Cú pháp | Giải thích |
 | --- | --- |
 | `ATG CONFIG RESET` | Đánh dấu khôi phục cấu hình mặc định, sau đó khởi động lại ESP32. Lần khởi động kế tiếp sẽ xóa toàn bộ cấu hình đã lưu trong Preferences và nạp lại giá trị mặc định. |
 
 > Lưu ý: Firmware hiện không phản hồi trạng thái lệnh qua MQTT. Theo dõi Serial Monitor để kiểm tra log xử lý lệnh; riêng lệnh GNSS sẽ báo lỗi khi thiếu hoặc thừa tham số.
+
+## Cấu hình trực tiếp mạch GNSS
+
+Trong một số trường hợp xảy ra lỗi (chẳng hạn lệch baud rate giữa ESP32 và GNSS), người dùng có thể cấu hình trực tiếp module GNSS bằng cách cắm serial USB vào module GNSS và sử dụng phần mềm u-center (đối với u-blox), hoặc gửi lệnh trực tiếp qua các phần mềm Serial Terminal (đối với UM98x). Các lệnh cấu hình GNSS được gửi theo định dạng văn bản thuần (với UM98x) hoặc UBX (với module GNSS của UBlox).
+
+### U-Blox (u-center)
+
+Người dùng có thể tải và cài đặt u-center từ [trang này](https://www.u-blox.com/en/product/u-center). Chọn U-Center (không phải U-Center 2).
+
+### Unicore UM98x
+Người dùng có thể gửi lệnh trực tiếp qua Serial Terminal (ví dụ PuTTY, Serial Debug Assistant, Serial Monitor của VSCode, v.v.) với tốc độ baud mặc định là 38400 hoặc115200. Các lệnh cấu hình module UM98x được gửi theo định dạng văn bản thuần (ASCII).

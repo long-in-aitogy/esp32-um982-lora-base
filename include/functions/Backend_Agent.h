@@ -86,7 +86,7 @@ private:
     String workflowPayload_;
 
     void loadPreferences();
-    void saveStatePreferences();
+    bool saveStatePreferences();
     void ensureDefaultServiceConfig();
     String normalAgentState() const;
     void setupWebsocket();

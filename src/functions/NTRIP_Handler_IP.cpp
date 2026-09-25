@@ -517,7 +517,7 @@ void stopNtrip() {}
 bool ntripServerConnected(uint8_t) { return false; }
 uint32_t ntripServerBps(uint8_t) { return 0; }
 bool startNtripRover(const String &, uint16_t, const String &, const String &,
-                    const String &, uint8_t) { return false; }
+                    String, uint8_t) { return false; }
 int loopNtripRover() { return 504; }
 void stopNtripRover() {}
 bool ntripRoverActive() { return false; }

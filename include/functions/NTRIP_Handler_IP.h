@@ -26,7 +26,7 @@ Client& activeNtripClient();
 // workflows. RTCM received here is injected into the GNSS module unchanged;
 // this firmware never decodes the RTCM payload.
 bool startNtripRover(const String &host, uint16_t port, const String &username,
-                    const String &password, const String &mountpoint,
+                    const String &password, String mountpoint,
                     uint8_t version = 1);
 int loopNtripRover();
 void stopNtripRover();

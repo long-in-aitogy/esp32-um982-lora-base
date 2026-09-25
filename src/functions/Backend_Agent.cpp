@@ -30,6 +30,11 @@ extern SemaphoreHandle_t rtcmBufferMutex;
 
 namespace {
 
+constexpr char BACKEND_PREFS_NAMESPACE[] = "backend";
+constexpr char BACKEND_PREFS_PARTITION[] = "agent_state";
+Preferences backendPrefs;
+bool useDedicatedBackendPrefs = false;
+
 constexpr size_t MAX_NMEA_PACKET = 512;
 constexpr size_t MAX_RTCM_PACKET = 1030;
 constexpr size_t NMEA_QUEUE_LENGTH = 32;
@@ -48,9 +53,61 @@ struct NmeaPacket {
     uint8_t data[MAX_NMEA_PACKET] = {};
 };
 
+Preferences &backendPreferences() {
+    return useDedicatedBackendPrefs ? backendPrefs : prefs;
+}
+
+bool beginBackendPreferences(bool readOnly) {
+    return useDedicatedBackendPrefs
+        ? backendPrefs.begin(BACKEND_PREFS_NAMESPACE, readOnly, BACKEND_PREFS_PARTITION)
+        : prefs.begin("myPrefs", readOnly);
+}
+
+bool migrateBackendPreferences() {
+    if (!backendPrefs.begin(BACKEND_PREFS_NAMESPACE, false, BACKEND_PREFS_PARTITION)) {
+        return false;
+    }
+    const bool alreadyMigrated = backendPrefs.isKey("MIGRATED");
+    backendPrefs.end();
+    if (alreadyMigrated) return true;
+
+    if (!prefs.begin("myPrefs", true)) return false;
+    if (!backendPrefs.begin(BACKEND_PREFS_NAMESPACE, false, BACKEND_PREFS_PARTITION)) {
+        prefs.end();
+        return false;
+    }
+
+    auto copyString = [](const char *key) {
+        if (!prefs.isKey(key)) return true;
+        const String value = prefs.getString(key);
+        return backendPrefs.putString(key, value) == value.length();
+    };
+    auto copyBool = [](const char *key) {
+        if (!prefs.isKey(key)) return true;
+        return backendPrefs.putBool(key, prefs.getBool(key)) == 1;
+    };
+
+    bool migrated = true;
+    migrated &= copyString("DEVICE_SERIAL");
+    migrated &= copyString("DEVICE_NAME");
+    migrated &= copyBool("PROVISIONED");
+    migrated &= copyBool("REMOTE_LOCK");
+    migrated &= copyString("BASE_JSON");
+    migrated &= copyString("SERVICE_JSON");
+    migrated &= copyString("LICENSE_KEY");
+    migrated &= copyString("CMD_RESULT");
+    migrated &= copyString("PROGRESS_JSON");
+    if (migrated) migrated = backendPrefs.putBool("MIGRATED", true) == 1;
+    prefs.end();
+    backendPrefs.end();
+    Serial.printf("[BACKEND][NVS] Migrasi state sang agent_state: %s.\n",
+                  migrated ? "THANH CONG" : "THAT BAI");
+    return migrated;
+}
+
 String readPreference(const char *key, const String &fallback = String()) {
     prefs.begin("myPrefs", true);
-    const String value = prefs.getString(key, fallback);
+    const String value = prefs.isKey(key) ? prefs.getString(key) : fallback;
     prefs.end();
     return value;
 }
@@ -60,12 +117,6 @@ bool readPreferenceBool(const char *key, bool fallback = false) {
     const bool value = prefs.getBool(key, fallback);
     prefs.end();
     return value;
-}
-
-void writePreferenceString(const char *key, const String &value) {
-    prefs.begin("myPrefs", false);
-    prefs.putString(key, value);
-    prefs.end();
 }
 
 void writePreferenceBool(const char *key, bool value) {
@@ -124,7 +175,7 @@ void copyJsonObject(JsonDocument &target, const char *key, const String &seriali
 }
 
 String urlEncode(const String &value) {
-    static constexpr char HEX[] = "0123456789ABCDEF";
+    static constexpr char hexDigits[] = "0123456789ABCDEF";
     String encoded;
     encoded.reserve(value.length() + 8);
     for (size_t i = 0; i < value.length(); ++i) {
@@ -133,8 +184,8 @@ String urlEncode(const String &value) {
             encoded += static_cast<char>(c);
         } else {
             encoded += '%';
-            encoded += HEX[(c >> 4) & 0x0F];
-            encoded += HEX[c & 0x0F];
+            encoded += hexDigits[(c >> 4) & 0x0F];
+            encoded += hexDigits[c & 0x0F];
         }
     }
     return encoded;
@@ -708,6 +759,7 @@ private:
         lastPingMs_ = millis();
         if (owner_) {
             owner_->websocketConnected_ = true;
+            Serial.println("[BACKEND][WS] WebSocket da ket noi.");
             owner_->publishStatus(true);
         }
     }
@@ -830,31 +882,56 @@ void BackendAgent::begin() {
 }
 
 void BackendAgent::loadPreferences() {
-    prefs.begin("myPrefs", true);
+    useDedicatedBackendPrefs = migrateBackendPreferences();
+    if (!beginBackendPreferences(true)) {
+        useDedicatedBackendPrefs = false;
+        prefs.begin("myPrefs", true);
+        Serial.println("[BACKEND][NVS] Khong mo duoc agent_state; dung NVS cu.");
+    }
+    Preferences &statePrefs = backendPreferences();
 
-    serialNumber_ = prefs.getString("DEVICE_SERIAL", String());
+    serialNumber_ = statePrefs.getString("DEVICE_SERIAL", String());
+    bool serialNeedsSave = false;
     if (serialNumber_.isEmpty()) {
         uint64_t mac = 0;
 #if !defined(NATIVE_BUILD)
         mac = ESP.getEfuseMac();
 #endif
         char generated[24] = {};
-        snprintf(generated, sizeof(generated), "LP_%012llX",
+        snprintf(generated, sizeof(generated), "esp_%012llX",
                  static_cast<unsigned long long>(mac & 0xFFFFFFFFFFFFULL));
         serialNumber_ = String(generated);
+        serialNeedsSave = true;
+    } else if (serialNumber_.startsWith("LP_")) {
+        // LP_ is reserved for the Windows agent; migrate existing ESP32 IDs.
+        serialNumber_ = String("esp_") + serialNumber_.substring(3);
+        serialNeedsSave = true;
     }
 
-    deviceName_ = prefs.getString("DEVICE_NAME", "ESP32-GNSS");
+    deviceName_ = statePrefs.getString("DEVICE_NAME", "ESP32-GNSS");
+    provisioned_ = statePrefs.getBool("PROVISIONED", false);
+    remotelyLocked_ = statePrefs.getBool("REMOTE_LOCK", false);
+    baseConfig_ = statePrefs.getString("BASE_JSON", "{}");
+    serviceConfig_ = statePrefs.getString("SERVICE_JSON", "{}");
+    licenseToken_ = statePrefs.getString("LICENSE_KEY", "");
+    lastCommandResult_ = statePrefs.getString("CMD_RESULT", "{}");
+    autoBaseProgress_ = statePrefs.getString("PROGRESS_JSON", "{}");
+    statePrefs.end();
+    prefs.begin("myPrefs", true);
     const uint32_t bootCounter = static_cast<uint32_t>(prefs.getInt("RSTRT_COUNT", 0));
-    provisioned_ = prefs.getBool("PROVISIONED", false);
-    remotelyLocked_ = prefs.getBool("REMOTE_LOCK", false);
-    baseConfig_ = prefs.getString("BASE_JSON", "{}");
-    serviceConfig_ = prefs.getString("SERVICE_JSON", "{}");
-    licenseToken_ = prefs.getString("LICENSE_KEY", "");
-    lastCommandResult_ = prefs.getString("CMD_RESULT", "{}");
-    autoBaseProgress_ = prefs.getString("PROGRESS_JSON", "{}");
     prefs.end();
+    if (serialNeedsSave) {
+        const bool opened = beginBackendPreferences(false);
+        const bool saved = opened
+            && backendPreferences().putString("DEVICE_SERIAL", serialNumber_) == serialNumber_.length();
+        if (opened) backendPreferences().end();
+        Serial.printf("[BACKEND] Serial %s: %s\n", serialNumber_.c_str(), saved ? "da luu NVS" : "LOI luu NVS");
+    }
     licenseValid_ = licenseMatchesSerial(serialNumber_, licenseToken_);
+    Serial.printf("[BACKEND] Device Serial: %s\n", serialNumber_.c_str());
+    Serial.printf("[BACKEND][LICENSE] NVS: %s; kiem tra: %s\n",
+                  licenseToken_.isEmpty() ? "chua co key" : "da co key",
+                  licenseValid_ ? "HOP LE" : "KHONG HOP LE");
 
     char bootId[40] = {};
     snprintf(bootId, sizeof(bootId), "%s-%08lx", serialNumber_.c_str(),
@@ -896,21 +973,26 @@ void BackendAgent::ensureDefaultServiceConfig() {
     service["server2_stream_on_demand"] = false;
     service["server2_stream_active"] = false;
     serializeJson(defaults, serviceConfig_);
-    writePreferenceString("SERVICE_JSON", serviceConfig_);
+    Serial.printf("[BACKEND][NVS] Default SERVICE_JSON (%u bytes): %s.\n",
+                  static_cast<unsigned>(serviceConfig_.length()),
+                  saveStatePreferences() ? "da luu" : "LOI luu");
 }
 
-void BackendAgent::saveStatePreferences() {
-    prefs.begin("myPrefs", false);
-    prefs.putString("DEVICE_SERIAL", serialNumber_);
-    prefs.putString("DEVICE_NAME", deviceName_);
-    prefs.putBool("PROVISIONED", provisioned_);
-    prefs.putBool("REMOTE_LOCK", remotelyLocked_);
-    prefs.putString("BASE_JSON", baseConfig_);
-    prefs.putString("SERVICE_JSON", serviceConfig_);
-    prefs.putString("LICENSE_KEY", licenseToken_);
-    prefs.putString("CMD_RESULT", lastCommandResult_);
-    prefs.putString("PROGRESS_JSON", autoBaseProgress_);
-    prefs.end();
+bool BackendAgent::saveStatePreferences() {
+    if (!beginBackendPreferences(false)) return false;
+    Preferences &statePrefs = backendPreferences();
+    bool saved = true;
+    saved &= statePrefs.putString("DEVICE_SERIAL", serialNumber_) == serialNumber_.length();
+    saved &= statePrefs.putString("DEVICE_NAME", deviceName_) == deviceName_.length();
+    saved &= statePrefs.putBool("PROVISIONED", provisioned_) == 1;
+    saved &= statePrefs.putBool("REMOTE_LOCK", remotelyLocked_) == 1;
+    saved &= statePrefs.putString("BASE_JSON", baseConfig_) == baseConfig_.length();
+    saved &= statePrefs.putString("SERVICE_JSON", serviceConfig_) == serviceConfig_.length();
+    saved &= statePrefs.putString("LICENSE_KEY", licenseToken_) == licenseToken_.length();
+    saved &= statePrefs.putString("CMD_RESULT", lastCommandResult_) == lastCommandResult_.length();
+    saved &= statePrefs.putString("PROGRESS_JSON", autoBaseProgress_) == autoBaseProgress_.length();
+    statePrefs.end();
+    return saved;
 }
 
 void BackendAgent::setAgentState(const String &state) {
@@ -1893,6 +1975,7 @@ String BackendAgent::lwtPayload() const {
 
 void BackendAgent::onMqttConnected() {
     mqttConnected_ = true;
+    Serial.println("[BACKEND][MQTT] Kenh MQTT san sang nhan lenh.");
     publishStatus(true);
 }
 
@@ -2104,7 +2187,10 @@ void BackendAgent::recordCommandResult(const String &command, const String &sour
     doc["command_id"] = commandId;
     doc["timestamp"] = epochString().toInt();
     serializeJson(doc, lastCommandResult_);
-    saveStatePreferences();
+    const bool saved = saveStatePreferences();
+    Serial.printf("[BACKEND][CMD] %s id=%s source=%s status=%s; NVS=%s\n",
+                  command.c_str(), commandId.c_str(), source.c_str(), status.c_str(),
+                  saved ? "OK" : "LOI");
 }
 
 void BackendAgent::publishConfigState(const char *kind) {
@@ -2257,6 +2343,8 @@ bool BackendAgent::executeRawCommands(JsonArray commands, String &error) {
 }
 
 void BackendAgent::handleCommand(const String &source, const String &message) {
+    Serial.printf("[BACKEND][RX] Nhan goi lenh qua %s (%u bytes).\n",
+                  source.c_str(), static_cast<unsigned>(message.length()));
     DynamicJsonDocument doc(COMMAND_DOCUMENT_SIZE);
     if (deserializeJson(doc, message) != DeserializationError::Ok || !doc.is<JsonObject>()) {
         recordCommandResult("UNKNOWN", source, "rejected", "command envelope must be an object", "");
@@ -2269,6 +2357,8 @@ void BackendAgent::handleCommand(const String &source, const String &message) {
     String commandId = doc["command_id"] | String();
     if (commandId.isEmpty() && !payload.isNull()) commandId = payload["command_id"] | String();
     if (commandId.isEmpty()) commandId = String("esp32-") + String(millis());
+    Serial.printf("[BACKEND][CMD] Nhan command=%s id=%s qua %s.\n",
+                  command.c_str(), commandId.c_str(), source.c_str());
     if (command.isEmpty()) {
         recordCommandResult("UNKNOWN", source, "rejected", "missing command", commandId);
         publishStatus(true);
@@ -2333,11 +2423,17 @@ void BackendAgent::handleCommand(const String &source, const String &message) {
     } else if (command == "DEPLOY_LICENSE") {
         const String license = payload["license_key"] | String();
         if (license.isEmpty()) {
+            Serial.println("[BACKEND][LICENSE] Lenh DEPLOY_LICENSE khong co license_key.");
             success = false;
             error = "missing payload.license_key";
         } else {
+            Serial.println("[BACKEND][LICENSE] Da nhan license_key (khong in noi dung key).");
             licenseToken_ = license;
             licenseValid_ = licenseMatchesSerial(serialNumber_, licenseToken_);
+            const bool saved = saveStatePreferences();
+            Serial.printf("[BACKEND][LICENSE] Kiem tra: %s; luu NVS: %s.\n",
+                          licenseValid_ ? "HOP LE" : "KHONG HOP LE",
+                          saved ? "THANH CONG" : "THAT BAI");
             detail = "license deployed; rebooting";
             restartAfterCommand = true;
             setAgentState("rebooting");
@@ -2558,6 +2654,10 @@ void BackendAgent::handleCommand(const String &source, const String &message) {
         prefs.begin("myPrefs", false);
         prefs.clear();
         prefs.end();
+        if (beginBackendPreferences(false)) {
+            backendPreferences().clear();
+            backendPreferences().end();
+        }
         mqtt.disconnect();
         ESP.restart();
     }

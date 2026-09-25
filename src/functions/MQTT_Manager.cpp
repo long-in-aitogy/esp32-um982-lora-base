@@ -46,6 +46,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   // not migrated their dashboard yet.  The CORS backend uses the pi/devices
   // command topics handled above.
   if (strcmp(topic, TOPIC_SUB_CMD) == 0) {
+    Serial.printf("[MQTT DOWNLINK] Nhan lenh legacy (%u bytes).\n", length);
     String cmd = "";
     for (int i = 0; i < length; i++) cmd += (char)payload[i];
     
@@ -109,11 +110,17 @@ int connectMQTT() {
     if (mqtt.connect(clientId.c_str(), mqttUser.c_str(), mqttPass.c_str(),
                     statusTopic.c_str(), 1, true, lwtPayload.c_str())) {
       Serial.println("[MQTT] Da ket noi thanh cong!");
-      mqtt.subscribe(topicSubCmd.c_str());
-      mqtt.subscribe((String("pi/devices/") + backendAgent.serial() + "/command").c_str(), 1);
-      mqtt.subscribe((String("pi/devices/") + backendAgent.serial() + "/commands").c_str(), 1);
-      mqtt.subscribe((String("pi/device/") + backendAgent.serial() + "/command").c_str(), 1);
+      const String commandTopic = String("pi/devices/") + backendAgent.serial() + "/command";
+      const String commandsTopic = String("pi/devices/") + backendAgent.serial() + "/commands";
+      const String legacyCommandTopic = String("pi/device/") + backendAgent.serial() + "/command";
+      const bool commandSubSent = mqtt.subscribe(commandTopic.c_str(), 1);
+      const bool commandsSubSent = mqtt.subscribe(commandsTopic.c_str(), 1);
+      const bool legacySubSent = mqtt.subscribe(legacyCommandTopic.c_str(), 1);
+      const bool oldSubSent = mqtt.subscribe(topicSubCmd.c_str());
       mqtt.subscribe((String("pi/devices/") + backendAgent.serial() + "/control_ack").c_str(), 1);
+      Serial.printf("[MQTT] SUBSCRIBE command=%s, commands=%s, legacy=%s, old=%s\n",
+                    commandSubSent ? "OK" : "LOI", commandsSubSent ? "OK" : "LOI",
+                    legacySubSent ? "OK" : "LOI", oldSubSent ? "OK" : "LOI");
       backendAgent.onMqttConnected();
       return 0;
     } else {

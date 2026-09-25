@@ -24,4 +24,14 @@
 #define GNSS_MODULE_TYPE GNSS_MODULE_TYPE_UBLOX // Chọn giữa GNSS_MODULE_TYPE_UBLOX hoặc GNSS_MODULE_TYPE_UNICORE
 #endif
 
+// CORS agent compatibility switches.  RTCM is framed and forwarded as raw
+// bytes only; this firmware deliberately does not decode RTCM message types.
+#ifndef BACKEND_PUBLISH_RAW_RTCM
+#define BACKEND_PUBLISH_RAW_RTCM 0
+#endif
+
+#ifndef BACKEND_WEBSOCKET_ENABLED
+#define BACKEND_WEBSOCKET_ENABLED 1
+#endif
+
 #endif
